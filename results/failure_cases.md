@@ -18,7 +18,7 @@ light grey and the image is almost twice as bright as the reference. Colours als
 equalization changes only luma (Y or L) and keeps the chroma values of the dark input, and those
 are small in a dark image, so the brightened result is nearly grey.
 
-## zerodce (paper equations) and zerodce_official on 179.png (8.75 dB / 9.48 dB; brightness 0.627 / 0.603, reference 0.284)
+## zerodce (official losses, default) and zerodce_paper on 179.png (9.48 dB / 8.75 dB; brightness 0.603 / 0.627, reference 0.284)
 
 The same scene breaks Zero-DCE for a related reason. The exposure loss pulls every 16x16 patch
 towards E = 0.6, so a scene whose correct appearance is dark is brightened to roughly twice the
@@ -26,7 +26,7 @@ reference. The colour constancy loss assumes the image averages to grey, which i
 brown wall with red and pink objects, so the wall turns pink. Both are assumptions of the
 zero-reference losses, not training failures: the model does what its losses ask.
 
-## zerodce_e045 on 55.png (11.22 dB; brightness 0.354, reference 0.584)
+## zerodce_paper_e045 on 55.png (11.22 dB; brightness 0.354, reference 0.584)
 
 With the lower exposure target (0.45) the darkest scenes end up too dark, and the result has a
 flat grey haze: the whites of the cabinet are grey and the shadows are lifted. This matches the

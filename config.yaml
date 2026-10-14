@@ -24,7 +24,9 @@ zerodce:
   exposure_level: 0.6     # well-exposedness level E
   exposure_patch: 16      # non-overlapping patch size for the exposure loss
   spatial_region: 4       # region size for the spatial consistency loss
-  loss_formulation: paper # paper (equations as printed) or official (formulas of the official code)
+  # official = formulas and weights of the official code (default: trains stably on LOL);
+  # paper = equations as printed, whose smoothness term is much weaker (see NOTES.md, Milestone 3).
+  loss_formulation: official
   loss_weights:           # paper Eq. 8: L_spa + L_exp + 0.5 L_col + 20 L_tvA
     spatial: 1.0
     exposure: 1.0
@@ -51,15 +53,16 @@ inference:
 
 evaluation:
   timing_warmup: 1
+  timing_repeats: 3       # per-image time is the fastest of these runs
   # Extra Zero-DCE weights evaluated alongside paths.weights (e.g. ablations); missing files are skipped.
-  zerodce_run_dir: checkpoints/zerodce_e060   # training logs copied to results/training
+  zerodce_run_dir: checkpoints/zerodce_official   # training logs copied to results/training
   zerodce_variants:
-    zerodce_e045:
+    zerodce_paper:
+      weights: weights/zerodce_paper.pth
+      settings: "E=0.6, paper loss equations and weights"
+      run_dir: checkpoints/zerodce_e060
+    zerodce_paper_e045:
       weights: weights/zerodce_e045.pth
-      settings: "E=0.45 (ablation: mean brightness of training references)"
+      settings: "E=0.45, paper loss equations (ablation: mean brightness of training references)"
       run_dir: checkpoints/zerodce_e045
-    zerodce_official:
-      weights: weights/zerodce_official.pth
-      settings: "E=0.6, official-code loss formulas and weights"
-      run_dir: checkpoints/zerodce_official
   figure_images: [1.png, 111.png, 23.png, 748.png]

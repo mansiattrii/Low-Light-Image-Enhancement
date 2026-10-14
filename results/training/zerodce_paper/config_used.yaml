@@ -47,17 +47,11 @@ zerodce:
   exposure_level: 0.6
   exposure_patch: 16
   spatial_region: 4
-  loss_formulation: official
   loss_weights:
     spatial: 1.0
     exposure: 1.0
     color: 0.5
     illumination: 20.0
-  official_loss_weights:
-    spatial: 1.0
-    exposure: 10.0
-    color: 5.0
-    illumination: 200.0
 train:
   output_dir: checkpoints
   crop_size: 256
@@ -77,10 +71,6 @@ evaluation:
       weights: weights/zerodce_e045.pth
       settings: 'E=0.45 (ablation: mean brightness of training references)'
       run_dir: checkpoints/zerodce_e045
-    zerodce_official:
-      weights: weights/zerodce_official.pth
-      settings: E=0.6, official-code loss formulas and weights
-      run_dir: checkpoints/zerodce_official
   figure_images:
   - 1.png
   - 111.png

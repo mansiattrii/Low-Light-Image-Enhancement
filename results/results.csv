@@ -1,8 +1,8 @@
 method,settings,psnr_mean,psnr_std,ssim_mean,ssim_std,brightness_mean,cpu_ms_mean,gpu_ms_mean,learned_params
-input (no enhancement),-,7.7733,2.6172,0.1952,0.0957,0.0594,0.0007,,0
-gamma,gamma=0.25,16.8696,2.8311,0.6344,0.1026,0.4369,7.1481,,0
-hist_eq,luma (YCrCb),14.2356,3.1378,0.4194,0.1012,0.5123,4.2467,,0
-clahe,"clip=32.0, tile=2",14.1960,1.7706,0.3922,0.0655,0.4670,5.3009,,0
-zerodce,E=0.6 (paper),16.6386,3.5935,0.5444,0.1171,0.4923,250.6133,11.5825,79416
-zerodce_e045,E=0.45 (ablation: mean brightness of training references),14.4667,2.0842,0.4689,0.0927,0.4162,251.2750,11.7989,79416
-zerodce_official,"E=0.6, official-code loss formulas and weights",16.8821,3.5494,0.5251,0.1123,0.5061,253.0392,11.7581,79416
+input (no enhancement),-,7.7733,2.6172,0.1952,0.0957,0.0594,0.0001,,0
+gamma,gamma=0.25,16.8696,2.8311,0.6344,0.1026,0.4369,8.7450,,0
+hist_eq,luma (YCrCb),14.2356,3.1378,0.4194,0.1012,0.5123,5.5152,,0
+clahe,"clip=32.0, tile=2",14.1960,1.7706,0.3922,0.0655,0.4670,6.4601,,0
+zerodce,"E=0.6, official-code loss formulas and weights",16.8821,3.5494,0.5251,0.1123,0.5061,384.0954,15.0948,79416
+zerodce_paper,"E=0.6, paper loss equations and weights",16.6386,3.5935,0.5444,0.1171,0.4923,391.8003,16.1450,79416
+zerodce_paper_e045,"E=0.45, paper loss equations (ablation: mean brightness of training references)",14.4667,2.0842,0.4689,0.0927,0.4162,294.0639,12.3206,79416

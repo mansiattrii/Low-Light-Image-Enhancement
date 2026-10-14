@@ -73,13 +73,16 @@ python -m src.train --epochs 2 --device cpu --num-workers 0 --output-dir checkpo
 The weights in `weights/` were trained locally on an RTX 3060:
 
 ```powershell
-python -m src.train --device cuda --num-workers 0 --output-dir checkpoints/zerodce_e060
-python -m src.train --device cuda --num-workers 0 --exposure-level 0.45 --output-dir checkpoints/zerodce_e045
-python -m src.train --device cuda --num-workers 0 --loss-formulation official --output-dir checkpoints/zerodce_official
+# weights/zerodce.pth (default): loss formulas and weights of the official implementation
+python -m src.train --device cuda --num-workers 0 --output-dir checkpoints/zerodce_official
+# weights/zerodce_paper.pth: the paper's printed loss equations and weights
+python -m src.train --device cuda --num-workers 0 --loss-formulation paper --output-dir checkpoints/zerodce_e060
+# weights/zerodce_e045.pth: paper equations with exposure level 0.45 (ablation)
+python -m src.train --device cuda --num-workers 0 --loss-formulation paper --exposure-level 0.45 --output-dir checkpoints/zerodce_e045
 ```
 
-`--loss-formulation official` uses the loss formulas and weights of the official implementation
-instead of the paper's printed equations; see `NOTES.md` (Milestone 3) for why that matters.
+The paper's equations as printed give a much weaker smoothness term than the official code, and
+training with them degrades after a few epochs; see `NOTES.md` (Milestone 3).
 
 ## Results
 

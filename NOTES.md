@@ -451,12 +451,39 @@ check the official version against a transcription of the original code.
   losses, not training bugs.
 - Every method amplifies noise in the darkest regions, which motivates Milestone 4.
 
+### Decision after review: the official formulation is the default
+
+After Milestone 3 the official-losses model became the project's default Zero-DCE:
+
+- `weights/zerodce.pth` is now the official-losses model (best epoch 14). The paper-equations
+  model moved to `weights/zerodce_paper.pth`; the E = 0.45 ablation stays in
+  `weights/zerodce_e045.pth`.
+- `config.yaml` now has `loss_formulation: official`, so `python -m src.train` reproduces the
+  default model. The paper's weights stay in the config and `--loss-formulation paper` trains the
+  paper version.
+- In `results/` the methods are now named `zerodce` (official losses), `zerodce_paper` and
+  `zerodce_paper_e045`. The tables in the Milestone 3 section above use the earlier names; the
+  numbers are the same.
+
+Why: both score about the same on eval15 (16.88 vs 16.64 dB PSNR, 0.525 vs 0.544 SSIM), but only
+the official formulation trains stably. The paper version's kept checkpoint is an epoch-2
+snapshot taken just before training degraded it. The API, demo and denoising study will see
+photos unlike LOL, and a stably trained model is the safer choice there.
+
+This deviates from the original brief (loss weights defaulting to the paper's values). The paper
+version is still implemented, tested, trained and reported.
+
 ### Speed (eval15, 600×400, `results/results.md`)
 
-- Zero-DCE: about 250 ms per image on the laptop CPU (8 PyTorch threads), about 12 ms on the RTX
-  3060 including copying the image to and from the GPU.
-- Classical methods: 4–7 ms on the CPU. Zero-DCE is ~35× slower on the CPU but still fast enough
-  for an interactive demo.
+- Zero-DCE: 250–430 ms per image on the laptop CPU (8 PyTorch threads) across the evaluation
+  runs, and 12–16 ms on the RTX 3060 including copying the image to and from the GPU.
+- Classical methods: 4–11 ms on the CPU. Zero-DCE is roughly 40× slower on the CPU but still fast
+  enough for an interactive demo.
+- **Timings on a laptop are noisy.** The same architecture measured 294 ms and 384 ms in one run,
+  and every method slowed down when Discord and Chrome were busy. The evaluation therefore times
+  each image three times and keeps the fastest run (standard benchmarking practice: slower runs
+  mostly measure interference), but differences under ~30% between runs on this machine are not
+  meaningful. Quality metrics are unaffected and identical across runs.
 
 ### Alternatives considered and rejected
 
@@ -484,7 +511,8 @@ check the official version against a transcription of the original code.
   not track quality here. It needs a small labelled validation set, which is stated as a caveat.
 - **Why is a lower exposure target worse even though it matches the references' brightness?**
   Brightness was not the main problem; flat, hazy outputs were.
-- **CPU vs GPU timing?** ~250 ms vs ~12 ms per 600×400 image; the GPU time includes transfers.
+- **CPU vs GPU timing?** 250–430 ms vs 12–16 ms per 600×400 image on my laptop; the GPU time
+  includes transfers. Timing on a shared laptop is noisy, so I report a range.
 - **What would you try next?** A stronger smoothness weight with the paper's formulas (to separate
   formula from weight effects), a no-reference quality metric for checkpoint selection, and
   Zero-DCE++ (downsampled curve estimation) for speed.

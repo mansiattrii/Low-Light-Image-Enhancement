@@ -50,10 +50,13 @@ class MethodResult:
 
 def zerodce_variants(config: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """The main Zero-DCE weights plus any extra variants listed in the config."""
+    zcfg = config["zerodce"]
+    official = zcfg.get("loss_formulation", "paper") == "official"
+    losses = "official-code loss formulas" if official else "paper loss equations"
     return {
         "zerodce": {
             "weights": config["paths"]["weights"],
-            "settings": f"E={config['zerodce']['exposure_level']} (paper)",
+            "settings": f"E={zcfg['exposure_level']}, {losses} and weights",
             "run_dir": config["evaluation"].get("zerodce_run_dir", ""),
         },
         **config["evaluation"].get("zerodce_variants", {}),
@@ -118,14 +121,19 @@ def select_pairs(config: dict[str, Any], split: str) -> list[ImagePair]:
     return val
 
 
-def _time_ms(enhance: Enhancer, image: np.ndarray) -> tuple[np.ndarray, float]:
-    start = time.perf_counter()
-    output = enhance(image)
-    return output, (time.perf_counter() - start) * 1000.0
+def _time_ms(enhance: Enhancer, image: np.ndarray, repeats: int) -> tuple[np.ndarray, float]:
+    # The fastest of several runs measures the code itself; slower runs mostly reflect
+    # interference from other processes on a shared machine.
+    best = float("inf")
+    for _ in range(repeats):
+        start = time.perf_counter()
+        output = enhance(image)
+        best = min(best, (time.perf_counter() - start) * 1000.0)
+    return output, best
 
 
 def evaluate_method(
-    method: Method, images: list[tuple[np.ndarray, np.ndarray]], warmup: int
+    method: Method, images: list[tuple[np.ndarray, np.ndarray]], warmup: int, repeats: int = 1
 ) -> MethodResult:
     """Score one method on preloaded image pairs and time it per image (excluding I/O)."""
     for low, _ in images[:warmup]:
@@ -133,7 +141,7 @@ def evaluate_method(
 
     psnr, ssim, brightness, cpu_ms = [], [], [], []
     for low, high in images:
-        output, ms = _time_ms(method.enhance, low)
+        output, ms = _time_ms(method.enhance, low, repeats)
         p, s = psnr_ssim(output, high)
         psnr.append(p)
         ssim.append(s)
@@ -145,7 +153,7 @@ def evaluate_method(
         for low, _ in images[:warmup]:
             method.gpu_enhance(low)
         # enhance_array copies the result back to the CPU, so each call includes the full GPU work.
-        gpu_ms = np.array([_time_ms(method.gpu_enhance, low)[1] for low, _ in images])
+        gpu_ms = np.array([_time_ms(method.gpu_enhance, low, repeats)[1] for low, _ in images])
 
     return MethodResult(
         method, np.array(psnr), np.array(ssim), np.array(brightness), np.array(cpu_ms), gpu_ms
@@ -165,6 +173,7 @@ def write_results(
     split_label: str,
     out_dir: Path,
     stem: str,
+    repeats: int = 1,
 ) -> None:
     """Write per-image scores, the summary CSV and the Markdown table."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -226,8 +235,8 @@ def write_results(
         "window (sigma 1.5), averaged over channels. Mean ± sample std over images.",
         f"- Brightness: mean output intensity in [0, 1]; the reference images average "
         f"{reference_brightness:.3f}.",
-        "- Time: mean wall-clock time per image for the enhancement call only (no file I/O), "
-        "after a warm-up call.",
+        f"- Time: wall-clock time of the enhancement call only (no file I/O), fastest of "
+        f"{repeats} runs per image after a warm-up call, averaged over images.",
         f"- Machine: {platform.processor() or platform.machine()}, {platform.system()}, "
         f"{torch.get_num_threads()} PyTorch threads; GPU: {gpu}. Python "
         f"{platform.python_version()}, PyTorch {torch.__version__}, OpenCV {cv2.__version__}, "
@@ -268,7 +277,12 @@ def main() -> None:
 
     with torch.inference_mode():
         results = [
-            evaluate_method(m, images, config["evaluation"]["timing_warmup"])
+            evaluate_method(
+                m,
+                images,
+                config["evaluation"]["timing_warmup"],
+                config["evaluation"]["timing_repeats"],
+            )
             for m in tqdm(methods, desc="Evaluating")
         ]
 
@@ -276,7 +290,15 @@ def main() -> None:
         label, stem = f"{config['paths']['eval_subset']} (test set)", "results"
     else:
         label, stem = "the validation split", "val_results"
-    write_results(results, images, pairs, label, Path(config["paths"]["results_dir"]), stem)
+    write_results(
+        results,
+        images,
+        pairs,
+        label,
+        Path(config["paths"]["results_dir"]),
+        stem,
+        config["evaluation"]["timing_repeats"],
+    )
 
     for r in results:
         print(
