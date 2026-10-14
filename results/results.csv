@@ -1,0 +1,5 @@
+method,settings,psnr_mean,psnr_std,ssim_mean,ssim_std,cpu_ms_mean,learned_params
+input (no enhancement),-,7.7733,2.6172,0.1952,0.0957,0.0016,0
+gamma,gamma=0.25,16.8696,2.8311,0.6344,0.1026,7.2068,0
+hist_eq,luma (YCrCb),14.2356,3.1378,0.4194,0.1012,4.2666,0
+clahe,"clip=32.0, tile=2",14.1960,1.7706,0.3922,0.0655,5.2771,0

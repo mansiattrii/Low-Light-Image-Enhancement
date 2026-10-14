@@ -1,0 +1,28 @@
+# Environments
+.venv/
+venv/
+.env
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Data: the dataset is downloaded manually; only the validation split list is tracked
+data/*
+!data/splits/
+
+# Training artifacts: only the final weights in weights/ are tracked
+checkpoints/
+runs/
+weights/*
+!weights/.gitkeep
+!weights/zerodce.pth
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

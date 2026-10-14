@@ -1,0 +1,141 @@
+method,image,psnr,ssim,cpu_ms
+input (no enhancement),113.png,4.2006,0.0501,0.00
+input (no enhancement),114.png,3.6860,0.0496,0.00
+input (no enhancement),116.png,8.0369,0.1459,0.00
+input (no enhancement),117.png,4.7824,0.0571,0.00
+input (no enhancement),144.png,6.1521,0.0885,0.00
+input (no enhancement),149.png,5.4118,0.0379,0.00
+input (no enhancement),154.png,9.2821,0.0540,0.00
+input (no enhancement),162.png,5.7536,0.0942,0.00
+input (no enhancement),185.png,9.3426,0.1399,0.00
+input (no enhancement),221.png,10.0584,0.3815,0.00
+input (no enhancement),235.png,12.1861,0.3606,0.00
+input (no enhancement),236.png,6.0476,0.1998,0.00
+input (no enhancement),238.png,5.5227,0.0598,0.00
+input (no enhancement),242.png,8.7666,0.0468,0.00
+input (no enhancement),249.png,5.7150,0.0428,0.00
+input (no enhancement),264.png,5.4266,0.1014,0.00
+input (no enhancement),267.png,7.5180,0.1141,0.00
+input (no enhancement),523.png,8.8486,0.1252,0.00
+input (no enhancement),525.png,7.7743,0.1234,0.00
+input (no enhancement),538.png,5.9170,0.0975,0.00
+input (no enhancement),566.png,9.9267,0.1574,0.00
+input (no enhancement),59.png,6.4339,0.2314,0.00
+input (no enhancement),597.png,6.3170,0.0587,0.00
+input (no enhancement),611.png,7.9082,0.1692,0.00
+input (no enhancement),612.png,8.6475,0.2614,0.00
+input (no enhancement),62.png,5.9899,0.0519,0.00
+input (no enhancement),640.png,4.4076,0.0853,0.00
+input (no enhancement),645.png,5.4553,0.2039,0.00
+input (no enhancement),662.png,8.8433,0.1208,0.00
+input (no enhancement),678.png,7.1867,0.1324,0.00
+input (no enhancement),684.png,7.4556,0.1342,0.00
+input (no enhancement),694.png,7.2301,0.1193,0.00
+input (no enhancement),696.png,8.0208,0.0746,0.00
+input (no enhancement),732.png,10.4755,0.3823,0.00
+input (no enhancement),78.png,7.8192,0.1361,0.00
+gamma,113.png,10.6410,0.4225,6.47
+gamma,114.png,9.5625,0.4123,6.96
+gamma,116.png,18.5186,0.5258,7.21
+gamma,117.png,12.2078,0.4402,7.58
+gamma,144.png,16.0247,0.5816,10.12
+gamma,149.png,11.0281,0.3018,7.74
+gamma,154.png,17.2120,0.3154,6.66
+gamma,162.png,14.4290,0.5232,6.56
+gamma,185.png,21.4608,0.5864,7.56
+gamma,221.png,16.0763,0.8060,9.73
+gamma,235.png,13.3776,0.6654,8.31
+gamma,236.png,20.0734,0.7880,7.46
+gamma,238.png,13.4475,0.4416,7.48
+gamma,242.png,17.5199,0.3545,7.16
+gamma,249.png,12.0526,0.3184,6.73
+gamma,264.png,14.3995,0.5990,7.47
+gamma,267.png,18.5674,0.5843,10.12
+gamma,523.png,16.4509,0.3942,8.49
+gamma,525.png,20.9560,0.6313,7.93
+gamma,538.png,15.5426,0.5735,7.58
+gamma,566.png,15.2845,0.4432,7.97
+gamma,59.png,20.5519,0.8060,9.19
+gamma,597.png,14.1985,0.3992,7.76
+gamma,611.png,16.8809,0.4751,7.36
+gamma,612.png,18.7993,0.7525,12.29
+gamma,62.png,13.9467,0.4703,7.61
+gamma,640.png,11.1970,0.4548,7.81
+gamma,645.png,16.7395,0.7288,12.02
+gamma,662.png,21.3026,0.5696,8.39
+gamma,678.png,20.0462,0.6574,8.52
+gamma,684.png,20.9626,0.7032,7.25
+gamma,694.png,20.3993,0.6702,11.21
+gamma,696.png,17.4950,0.4885,7.86
+gamma,732.png,15.3505,0.7865,7.97
+gamma,78.png,21.0687,0.6596,7.53
+hist_eq,113.png,14.5447,0.2417,5.71
+hist_eq,114.png,12.9392,0.2335,11.18
+hist_eq,116.png,16.4465,0.3258,6.19
+hist_eq,117.png,14.8602,0.2443,5.64
+hist_eq,144.png,15.3721,0.2826,6.91
+hist_eq,149.png,18.3726,0.3037,5.24
+hist_eq,154.png,12.6363,0.2428,6.20
+hist_eq,162.png,20.3056,0.4791,5.52
+hist_eq,185.png,13.1036,0.3049,8.20
+hist_eq,221.png,12.0716,0.3368,6.77
+hist_eq,235.png,11.7851,0.5664,6.11
+hist_eq,236.png,16.0799,0.4739,5.94
+hist_eq,238.png,16.5319,0.2865,6.28
+hist_eq,242.png,11.7757,0.2147,5.26
+hist_eq,249.png,14.0124,0.1409,5.78
+hist_eq,264.png,20.2030,0.6246,5.48
+hist_eq,267.png,15.5831,0.5188,6.58
+hist_eq,523.png,14.7861,0.3577,7.32
+hist_eq,525.png,14.0819,0.3263,6.39
+hist_eq,538.png,18.7474,0.5116,5.91
+hist_eq,566.png,12.5187,0.3756,6.07
+hist_eq,59.png,16.3044,0.5632,6.59
+hist_eq,597.png,14.6360,0.1717,5.20
+hist_eq,611.png,19.2024,0.5440,7.22
+hist_eq,612.png,14.5105,0.3882,5.84
+hist_eq,62.png,15.3029,0.2963,5.95
+hist_eq,640.png,16.9544,0.4190,5.46
+hist_eq,645.png,16.3624,0.4589,6.09
+hist_eq,662.png,13.0024,0.3230,7.06
+hist_eq,678.png,14.0832,0.3644,5.40
+hist_eq,684.png,16.1290,0.5957,5.96
+hist_eq,694.png,16.4473,0.5183,6.00
+hist_eq,696.png,14.9435,0.4008,6.44
+hist_eq,732.png,14.0482,0.6428,5.82
+hist_eq,78.png,16.0029,0.5035,6.10
+clahe,113.png,12.4194,0.2730,5.65
+clahe,114.png,11.1906,0.2713,5.18
+clahe,116.png,17.3010,0.3010,5.76
+clahe,117.png,12.3912,0.2750,5.45
+clahe,144.png,16.1148,0.3028,5.44
+clahe,149.png,15.2678,0.3407,5.30
+clahe,154.png,18.9565,0.3610,5.04
+clahe,162.png,16.0670,0.4387,5.40
+clahe,185.png,16.8951,0.3475,5.43
+clahe,221.png,12.4976,0.2917,5.28
+clahe,235.png,12.5620,0.5800,4.94
+clahe,236.png,15.2731,0.3781,5.38
+clahe,238.png,14.7115,0.3066,5.47
+clahe,242.png,20.4648,0.3490,5.00
+clahe,249.png,12.5044,0.2204,5.43
+clahe,264.png,17.9296,0.5951,5.51
+clahe,267.png,16.3137,0.4809,5.23
+clahe,523.png,16.1528,0.3762,5.88
+clahe,525.png,15.3293,0.3325,6.55
+clahe,538.png,17.6349,0.4409,6.39
+clahe,566.png,12.8152,0.3712,5.08
+clahe,59.png,14.6121,0.4702,6.48
+clahe,597.png,13.6821,0.2486,5.52
+clahe,611.png,17.2780,0.5047,5.96
+clahe,612.png,15.3386,0.3612,6.44
+clahe,62.png,15.8610,0.3453,5.12
+clahe,640.png,13.6735,0.3965,5.92
+clahe,645.png,13.8680,0.3528,6.40
+clahe,662.png,17.3056,0.3766,5.89
+clahe,678.png,14.2263,0.3254,5.30
+clahe,684.png,16.8446,0.5744,5.43
+clahe,694.png,16.3986,0.4589,5.81
+clahe,696.png,20.6214,0.4447,5.31
+clahe,732.png,13.8423,0.5322,5.77
+clahe,78.png,18.0554,0.4849,7.96

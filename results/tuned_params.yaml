@@ -1,0 +1,12 @@
+selection:
+  split: validation (35 pairs from our485)
+  criterion: mean PSNR
+gamma:
+  gamma: 0.25
+  val_psnr: 16.3935
+  val_ssim: 0.5523
+clahe:
+  clip_limit: 32.0
+  tile_size: 2
+  val_psnr: 15.4971
+  val_ssim: 0.386
