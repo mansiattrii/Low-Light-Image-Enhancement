@@ -5,8 +5,8 @@ equalization, CLAHE) with Zero-DCE, a lightweight deep curve-estimation model im
 paper. Quality is measured with PSNR and SSIM on the LOL dataset, and a denoising study checks
 where removing noise helps.
 
-> Work in progress. Milestones 1 (data and classical baselines) and 2 (Zero-DCE model and
-> training code) are complete.
+> Work in progress. Milestones 1 (data and classical baselines), 2 (Zero-DCE model and training
+> code) and 3 (training and full evaluation) are complete.
 
 ## Setup (Windows, PowerShell)
 
@@ -15,6 +15,15 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+```
+
+`requirements.txt` installs the CPU build of PyTorch, which is enough for inference. To train on
+an NVIDIA GPU, replace it with the CUDA build of the same version (check `nvidia-smi` for the
+CUDA version your driver supports):
+
+```powershell
+pip install --force-reinstall --no-deps torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cu132
+python -c "import torch; print(torch.cuda.is_available())"
 ```
 
 ## Dataset
@@ -36,6 +45,9 @@ data/LOL/eval15/low/*.png   data/LOL/eval15/high/*.png   (15 test pairs)
 python -m src.classical                 # tune classical baselines on the validation split
 python -m src.evaluate                  # evaluate on eval15 -> results/results.md
 python -m src.evaluate --split val      # evaluate on the validation split
+python -m src.figures                   # comparison grid, failure cases, checkpoint comparison
+python -m src.analysis                  # best-vs-last checkpoint diagnostic (needs checkpoints/)
+python -m src.enhance --input dark.jpg --output out.png --method zerodce
 pytest
 ruff check .; ruff format --check .
 ```
@@ -57,6 +69,17 @@ Locally (CPU, slow; for checking only):
 ```powershell
 python -m src.train --epochs 2 --device cpu --num-workers 0 --output-dir checkpoints/cpu_check
 ```
+
+The weights in `weights/` were trained locally on an RTX 3060:
+
+```powershell
+python -m src.train --device cuda --num-workers 0 --output-dir checkpoints/zerodce_e060
+python -m src.train --device cuda --num-workers 0 --exposure-level 0.45 --output-dir checkpoints/zerodce_e045
+python -m src.train --device cuda --num-workers 0 --loss-formulation official --output-dir checkpoints/zerodce_official
+```
+
+`--loss-formulation official` uses the loss formulas and weights of the official implementation
+instead of the paper's printed equations; see `NOTES.md` (Milestone 3) for why that matters.
 
 ## Results
 

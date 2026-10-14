@@ -303,7 +303,9 @@ What it showed:
   output brightness on the validation images was 0.402 for the epoch-2 checkpoint and 0.528 at
   epoch 5, against 0.458 for the references. The exposure loss keeps pushing towards E = 0.6, past
   the references' brightness, so PSNR drops. This is the mismatch predicted above, and it is why
-  the best checkpoint is chosen by validation PSNR rather than by loss.
+  the best checkpoint is chosen by validation PSNR rather than by loss. *(Milestone 3 showed
+  brightness is not the main cause: the drop is lost contrast and haloes caused by a weak
+  smoothness term. See "Why validation PSNR fell" below.)*
 - Lower zero-reference loss does not mean higher PSNR: the training objective and the evaluation
   metric measure different things.
 
@@ -311,7 +313,7 @@ What it showed:
 
 79K parameters and seven small convolutions (the paper reports 5.21 GFLOPs for a 256×256 input).
 The curve is a few multiply-adds per pixel. No pooling or attention, so cost grows linearly with
-the number of pixels. Measured CPU timings come in Milestone 3.
+the number of pixels. Measured timings: see Milestone 3.
 
 ### Alternatives considered and rejected
 
@@ -342,3 +344,147 @@ the number of pixels. Measured CPU timings come in Milestone 3.
 - **What did you change from the paper and why?** Training data (LOL instead of SICE, as the
   project requires), 256×256 random crops instead of 512×512 resizing, and gradient clipping from
   the official code. Everything else follows the paper.
+
+---
+
+## Milestone 3: training and full evaluation
+
+### What was built
+
+- `src/enhance.py`: the single inference function used by the CLI, evaluation and later the API
+  and demo. Handles grayscale, RGBA, uint8 or float input, odd sizes, and caps the longer side at
+  `inference.max_side` (2048).
+- `src/evaluate.py` now evaluates Zero-DCE variants as well and reports mean output brightness and
+  GPU time (when a GPU exists) next to PSNR, SSIM, CPU time and parameter count.
+- `src/figures.py`: comparison grid, failure cases, best-vs-last checkpoint figure, own-photos
+  grid (when `data/own/` has images) and copies of the training logs.
+- `src/analysis.py`: the checkpoint drift diagnostic explained below.
+- `src/losses.py`: the official code's loss formulas as a second formulation
+  (`loss_formulation: official`), checked against a transcription of the official `Myloss.py`.
+
+### How training was run
+
+- On my laptop's RTX 3060 (6 GB), not Colab. The first attempt ran on the CPU because the
+  installed PyTorch was the CPU-only build (about 4 minutes per epoch with two runs in parallel).
+  Installing the CUDA build of the same version brought it to 10–18 seconds per epoch. The Colab
+  notebook still works and is documented as the alternative.
+- Three runs, 200 epochs each, everything identical except the loss:
+
+| Run | Loss | Best epoch (val PSNR) | Training time |
+|---|---|---|---|
+| `zerodce` | paper equations, paper weights, E = 0.6 | 2 (15.49 dB) | 58 min (two runs sharing the GPU) |
+| `zerodce_e045` | paper equations, E = 0.45 (ablation) | 3 (14.65 dB) | 58 min (shared) |
+| `zerodce_official` | official-code formulas and weights, E = 0.6 | 14 (16.08 dB) | 44 min (alone; one restart from epoch 92) |
+
+The official run was stopped once at epoch 92 because the laptop ran low on memory, and resumed
+from `last.pth`. The resume logic made this a non-event.
+
+E = 0.45 was set from the mean brightness of the 450 training-split references (0.455). That uses
+reference images to choose a hyperparameter, so this variant is not strictly zero-reference.
+
+### Results on eval15 (`results/results.md`)
+
+| Method | PSNR (dB) | SSIM | Brightness (ref 0.451) | CPU ms | GPU ms |
+|---|---|---|---|---|---|
+| Input | 7.77 ± 2.62 | 0.195 | 0.059 | – | – |
+| Gamma 0.25 | 16.87 ± 2.83 | **0.634** | 0.437 | 7.1 | – |
+| Histogram equalization | 14.24 ± 3.14 | 0.419 | 0.512 | 4.2 | – |
+| CLAHE | 14.20 ± 1.77 | 0.392 | 0.467 | 5.3 | – |
+| Zero-DCE, paper losses | 16.64 ± 3.59 | 0.544 | 0.492 | 250.6 | 11.6 |
+| Zero-DCE, paper losses, E = 0.45 | 14.47 ± 2.08 | 0.469 | 0.416 | 251.3 | 11.8 |
+| Zero-DCE, official losses | **16.88 ± 3.55** | 0.525 | 0.506 | 253.0 | 11.8 |
+
+What this says:
+- **Zero-DCE ties tuned gamma on PSNR and loses on SSIM.** The 0.01 dB gap between the official
+  variant and gamma is meaningless next to standard deviations of about 3 dB on 15 images.
+- **Gamma had an advantage Zero-DCE did not.** Its one parameter was tuned on validation PSNR
+  against references. Zero-DCE never sees references in training; only checkpoint selection does.
+- **Zero-DCE spreads its errors differently.** Its standard deviation is larger: it wins clearly on
+  some images (e.g. 111.png, 20.91 dB vs 18.21 for gamma) and loses badly on others (179.png).
+- **Lowering E to 0.45 hurt.** Matching average brightness does not help if the model produces flat,
+  hazy images (below).
+
+### Why validation PSNR fell during training (`results/analysis/checkpoint_drift.md`)
+
+With the paper's equations, validation PSNR peaked at epoch 2–3 and then fell for the remaining
+~200 epochs while the training loss kept improving. To find out why, `src/analysis.py` scores the
+best and last checkpoints three ways: plain PSNR, PSNR after rescaling the output to the
+reference's mean brightness, and PSNR after rescaling each colour channel to the reference's
+channel means (diagnostic only; these use the references).
+
+| Run | Checkpoint | PSNR | Brightness-corrected | Colour-corrected | Contrast (ref 0.180) |
+|---|---|---|---|---|---|
+| paper | epoch 2 | 15.49 | 18.51 | 18.92 | 0.196 |
+| paper | epoch 200 | 11.61 | 13.93 | 14.15 | 0.143 |
+| official | epoch 14 | 16.08 | 18.67 | 19.01 | 0.181 |
+| official | epoch 200 | 15.22 | 18.41 | 18.64 | 0.190 |
+
+- Brightness is not the explanation. Removing the brightness error helps both checkpoints, and
+  afterwards the gap between them is still 4.6 dB (18.51 vs 13.93). Removing the colour error
+  as well changes almost nothing (about 0.2–0.4 dB).
+- What is left is structure: contrast (std of luma) fell from 0.196 to 0.143. The epoch-200 images in
+  `figures/checkpoint_comparison.png` show a grey-pink haze, embossed halos around edges and
+  amplified noise: the classic look of curve maps that change too sharply from pixel to pixel.
+- **Root cause: the illumination smoothness term is far weaker in the paper's equations as I
+  implemented them than in the official code.** Relative to the exposure term, the official code's
+  smoothness penalty (`200 · 2 · Σ mean(∇A²)`) is roughly 80–160 times stronger than the paper's
+  printed version with weight 20 averaged over 8 iterations. This is exactly the normalization
+  ambiguity listed under "could not verify" in Milestone 2.
+- **The official formulation fixes it.** Its last checkpoint keeps the reference's contrast, and
+  its corrected PSNR barely changes between epoch 14 and 200; validation PSNR stays in a
+  15–16 dB band for the whole run instead of collapsing.
+
+**Lesson:** "following the paper" was not enough. A paper's equations can leave out scale factors
+that decide whether training works; the reference code is part of the specification. Comparing
+the two was only possible because both are implemented behind one config switch with tests that
+check the official version against a transcription of the original code.
+
+### Failure cases (`results/failure_cases.md`)
+
+- Gamma fails on the darkest input (55.png): one exponent cannot brighten it enough, and it lifts
+  shadow noise.
+- Histogram equalization and CLAHE fail on 179.png, whose reference is genuinely dark: they force
+  the full intensity range and nearly double the brightness. They also wash out colour, because
+  only luma is changed and the chroma of a dark image is small.
+- Zero-DCE fails on the same 179.png for its own reasons: the exposure loss pushes every patch to
+  0.6, and the Gray-World colour loss turns a brown wall pink. These are assumptions built into the
+  losses, not training bugs.
+- Every method amplifies noise in the darkest regions, which motivates Milestone 4.
+
+### Speed (eval15, 600×400, `results/results.md`)
+
+- Zero-DCE: about 250 ms per image on the laptop CPU (8 PyTorch threads), about 12 ms on the RTX
+  3060 including copying the image to and from the GPU.
+- Classical methods: 4–7 ms on the CPU. Zero-DCE is ~35× slower on the CPU but still fast enough
+  for an interactive demo.
+
+### Alternatives considered and rejected
+
+- **Reporting the last checkpoint.** It is what the loss converged to, but with the paper's
+  equations it is visibly broken; choosing by validation PSNR is standard and stated openly.
+- **Silently switching to the official losses.** The brief asks for the paper. Both are kept,
+  both are reported, and the difference is explained.
+- **Tuning E on eval15.** Never. E = 0.45 came from training-split references.
+- **Early stopping on the zero-reference loss.** The loss kept falling while quality fell, so it is
+  the wrong signal for stopping.
+
+### Likely interview questions
+
+- **Does Zero-DCE beat the classical baseline?** On PSNR it ties tuned gamma (16.88 vs 16.87 dB);
+  on SSIM gamma is better (0.634 vs 0.525). Gamma was tuned with references; Zero-DCE was not.
+  Zero-DCE adapts per image and per pixel, which shows on some images but not on average.
+- **Why did your model's PSNR peak at epoch 2?** With the paper's equations as printed, the
+  smoothness penalty was too weak, so longer training produced sharp, haloed curve maps and lost
+  contrast. The diagnostic (brightness- and colour-corrected PSNR) showed the gap stays after
+  removing brightness and colour errors. The official code's formulation trains stably.
+- **How did you diagnose it?** Separated the error into global brightness, colour balance and
+  everything else by rescaling outputs to the reference's means, then looked at the images, then
+  compared the loss scales with the official implementation.
+- **Why choose checkpoints by PSNR if training is zero-reference?** Because the training loss does
+  not track quality here. It needs a small labelled validation set, which is stated as a caveat.
+- **Why is a lower exposure target worse even though it matches the references' brightness?**
+  Brightness was not the main problem; flat, hazy outputs were.
+- **CPU vs GPU timing?** ~250 ms vs ~12 ms per 600×400 image; the GPU time includes transfers.
+- **What would you try next?** A stronger smoothness weight with the paper's formulas (to separate
+  formula from weight effects), a no-reference quality metric for checkpoint selection, and
+  Zero-DCE++ (downsampled curve estimation) for speed.

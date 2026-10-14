@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
@@ -64,6 +65,53 @@ def illumination_smoothness_loss(alphas: Tensor, iterations: int) -> Tensor:
     return (per_map.sum(dim=1) / iterations).mean()
 
 
+# The official implementation (github.com/Li-Chongyi/Zero-DCE, Myloss.py) uses different
+# formulas from the paper. They are reproduced here as an alternative formulation,
+# selected with ``loss_formulation: official`` and used with the official weights.
+
+
+def spatial_consistency_loss_official(
+    enhanced: Tensor, original: Tensor, region_size: int = 4
+) -> Tensor:
+    """Signed neighbour differences with zero padding, so border regions are also
+    compared against an implicit black neighbour."""
+    y = F.pad(_region_means(enhanced, region_size), (1, 1, 1, 1))
+    i = F.pad(_region_means(original, region_size), (1, 1, 1, 1))
+
+    def diffs(t: Tensor) -> list[Tensor]:
+        centre = t[..., 1:-1, 1:-1]
+        return [
+            centre - t[..., 1:-1, :-2],
+            centre - t[..., 1:-1, 2:],
+            centre - t[..., :-2, 1:-1],
+            centre - t[..., 2:, 1:-1],
+        ]
+
+    return sum(((dy - di) ** 2) for dy, di in zip(diffs(y), diffs(i), strict=True)).mean()
+
+
+def exposure_control_loss_official(
+    enhanced: Tensor, level: float = 0.6, patch_size: int = 16
+) -> Tensor:
+    """Squared distance of patch means from the exposure level."""
+    return ((_region_means(enhanced, patch_size) - level) ** 2).mean()
+
+
+def color_constancy_loss_official(enhanced: Tensor) -> Tensor:
+    """sqrt of the summed squares of the squared channel-mean differences."""
+    r, g, b = enhanced.mean(dim=(2, 3)).unbind(dim=1)
+    d_rg, d_rb, d_gb = (r - g) ** 2, (r - b) ** 2, (g - b) ** 2
+    return torch.sqrt(d_rg**2 + d_rb**2 + d_gb**2).mean()
+
+
+def illumination_smoothness_loss_official(alphas: Tensor) -> Tensor:
+    """Squared horizontal and vertical gradients, averaged per map and summed over maps."""
+    dy = (alphas[..., 1:, :] - alphas[..., :-1, :]) ** 2
+    dx = (alphas[..., :, 1:] - alphas[..., :, :-1]) ** 2
+    per_image = dy.mean(dim=(2, 3)).sum(dim=1) + dx.mean(dim=(2, 3)).sum(dim=1)
+    return 2.0 * per_image.mean()
+
+
 @dataclass(frozen=True)
 class LossWeights:
     spatial: float = 1.0
@@ -73,7 +121,11 @@ class LossWeights:
 
 
 class ZeroDCELoss(nn.Module):
-    """Weighted sum of the four zero-reference losses (Eq. 8)."""
+    """Weighted sum of the four zero-reference losses (Eq. 8).
+
+    ``formulation`` selects the paper's equations ("paper") or the official code's
+    ("official"); the weights must match the chosen formulation.
+    """
 
     def __init__(
         self,
@@ -82,23 +134,41 @@ class ZeroDCELoss(nn.Module):
         exposure_patch: int = 16,
         spatial_region: int = 4,
         iterations: int = 8,
+        formulation: str = "paper",
     ) -> None:
         super().__init__()
+        if formulation not in ("paper", "official"):
+            raise ValueError(f"formulation must be 'paper' or 'official', got {formulation!r}")
         self.weights = weights or LossWeights()
         self.exposure_level = exposure_level
         self.exposure_patch = exposure_patch
         self.spatial_region = spatial_region
         self.iterations = iterations
+        self.formulation = formulation
 
     def forward(
         self, original: Tensor, enhanced: Tensor, alphas: Tensor
     ) -> tuple[Tensor, dict[str, float]]:
         """Return the total loss and the unweighted value of each term for logging."""
-        terms = {
-            "spatial": spatial_consistency_loss(enhanced, original, self.spatial_region),
-            "exposure": exposure_control_loss(enhanced, self.exposure_level, self.exposure_patch),
-            "color": color_constancy_loss(enhanced),
-            "illumination": illumination_smoothness_loss(alphas, self.iterations),
-        }
+        if self.formulation == "official":
+            terms = {
+                "spatial": spatial_consistency_loss_official(
+                    enhanced, original, self.spatial_region
+                ),
+                "exposure": exposure_control_loss_official(
+                    enhanced, self.exposure_level, self.exposure_patch
+                ),
+                "color": color_constancy_loss_official(enhanced),
+                "illumination": illumination_smoothness_loss_official(alphas),
+            }
+        else:
+            terms = {
+                "spatial": spatial_consistency_loss(enhanced, original, self.spatial_region),
+                "exposure": exposure_control_loss(
+                    enhanced, self.exposure_level, self.exposure_patch
+                ),
+                "color": color_constancy_loss(enhanced),
+                "illumination": illumination_smoothness_loss(alphas, self.iterations),
+            }
         total = sum(getattr(self.weights, name) * value for name, value in terms.items())
         return total, {name: value.item() for name, value in terms.items()}

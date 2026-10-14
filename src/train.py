@@ -20,6 +20,7 @@ from typing import Any
 
 import numpy as np
 import torch
+import yaml
 from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 from torch.utils.data import DataLoader
@@ -43,12 +44,15 @@ def seed_everything(seed: int) -> None:
 
 def build_criterion(cfg: dict[str, Any]) -> ZeroDCELoss:
     """Create the combined loss from the ``zerodce`` config section."""
+    formulation = cfg.get("loss_formulation", "paper")
+    weights_key = "official_loss_weights" if formulation == "official" else "loss_weights"
     return ZeroDCELoss(
-        weights=LossWeights(**cfg["loss_weights"]),
+        weights=LossWeights(**cfg[weights_key]),
         exposure_level=cfg["exposure_level"],
         exposure_patch=cfg["exposure_patch"],
         spatial_region=cfg["spatial_region"],
         iterations=cfg["iterations"],
+        formulation=formulation,
     )
 
 
@@ -159,6 +163,10 @@ def train(
     num_workers = tcfg["num_workers"] if num_workers is None else num_workers
     dev = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
     seed = config["seed"]
+    with open(out / "config_used.yaml", "w", encoding="utf-8") as f:
+        yaml.safe_dump(
+            {**config, "run": {"epochs": epochs, "device": str(dev)}}, f, sort_keys=False
+        )
 
     pairs = list_pairs(data_root, paths["train_subset"])
     train_pairs, val_pairs = split_train_val(
@@ -274,9 +282,22 @@ def main() -> None:
     parser.add_argument("--epochs", type=int, help="Override train.epochs")
     parser.add_argument("--device", help="cpu or cuda (default: cuda if available)")
     parser.add_argument("--num-workers", type=int, help="Override train.num_workers")
+    parser.add_argument(
+        "--exposure-level", type=float, help="Override zerodce.exposure_level (ablation)"
+    )
+    parser.add_argument(
+        "--loss-formulation",
+        choices=["paper", "official"],
+        help="Override zerodce.loss_formulation (official = formulas and weights of the code)",
+    )
     args = parser.parse_args()
+    config = load_config(args.config)
+    if args.exposure_level is not None:
+        config["zerodce"]["exposure_level"] = args.exposure_level
+    if args.loss_formulation is not None:
+        config["zerodce"]["loss_formulation"] = args.loss_formulation
     train(
-        load_config(args.config),
+        config,
         args.data_root,
         args.output_dir,
         args.epochs,

@@ -20,6 +20,8 @@ runs/
 weights/*
 !weights/.gitkeep
 !weights/zerodce.pth
+!weights/zerodce_e045.pth
+!weights/zerodce_official.pth
 
 # OS / editor
 .DS_Store
