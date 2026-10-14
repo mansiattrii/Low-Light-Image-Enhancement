@@ -8,6 +8,8 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import torch
+from torch.utils.data import Dataset
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff"}
 
@@ -118,3 +120,41 @@ def split_train_val(
     train = [p for p in pairs if p.name not in val_set]
     val = [p for p in pairs if p.name in val_set]
     return train, val
+
+
+def to_tensor(image: np.ndarray) -> torch.Tensor:
+    """Convert an (H, W, 3) array in [0, 1] or uint8 to a float (3, H, W) tensor in [0, 1]."""
+    tensor = torch.from_numpy(np.ascontiguousarray(image)).permute(2, 0, 1)
+    return tensor.float().div(255.0) if tensor.dtype == torch.uint8 else tensor.float()
+
+
+class LowLightCrops(Dataset):
+    """Random crops of the low-light images only; Zero-DCE trains without references.
+
+    Images are decoded once and kept in memory as uint8 (about 0.7 MB each for LOL).
+    Randomness comes from torch's RNG, which the training loop seeds per epoch.
+    """
+
+    def __init__(self, pairs: list[ImagePair], crop_size: int, augment: bool = True) -> None:
+        self.images = [to_uint8(read_image(p.low)) for p in pairs]
+        self.crop_size = crop_size
+        self.augment = augment
+        for pair, image in zip(pairs, self.images, strict=True):
+            if min(image.shape[:2]) < crop_size:
+                raise ValueError(f"{pair.name} is smaller than crop size {crop_size}")
+
+    def __len__(self) -> int:
+        return len(self.images)
+
+    def __getitem__(self, index: int) -> torch.Tensor:
+        image = self.images[index]
+        h, w = image.shape[:2]
+        top = int(torch.randint(0, h - self.crop_size + 1, (1,)))
+        left = int(torch.randint(0, w - self.crop_size + 1, (1,)))
+        crop = to_tensor(image[top : top + self.crop_size, left : left + self.crop_size])
+        if self.augment:
+            if torch.rand(1) < 0.5:
+                crop = crop.flip(-1)
+            if torch.rand(1) < 0.5:
+                crop = crop.flip(-2)
+        return crop

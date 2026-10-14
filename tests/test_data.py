@@ -3,8 +3,16 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
+import torch
 
-from src.data import list_pairs, load_pair, read_image, split_train_val, write_image
+from src.data import (
+    LowLightCrops,
+    list_pairs,
+    load_pair,
+    read_image,
+    split_train_val,
+    write_image,
+)
 
 
 def _write_png(path: Path, image: np.ndarray) -> None:
@@ -86,3 +94,16 @@ def test_split_is_reproducible_for_same_seed(fake_lol: Path, tmp_path: Path) -> 
     _, a = split_train_val(pairs, tmp_path / "a.txt", val_size=4, seed=3)
     _, b = split_train_val(pairs, tmp_path / "b.txt", val_size=4, seed=3)
     assert [p.name for p in a] == [p.name for p in b]
+
+
+def test_low_light_crops(fake_lol: Path) -> None:
+    dataset = LowLightCrops(list_pairs(fake_lol, "train"), crop_size=6)
+    assert len(dataset) == 10
+    crop = dataset[0]
+    assert crop.shape == (3, 6, 6) and crop.dtype == torch.float32
+    assert crop.min() >= 0.0 and crop.max() <= 1.0
+
+
+def test_low_light_crops_rejects_small_images(fake_lol: Path) -> None:
+    with pytest.raises(ValueError, match="smaller than crop size"):
+        LowLightCrops(list_pairs(fake_lol, "train"), crop_size=64)

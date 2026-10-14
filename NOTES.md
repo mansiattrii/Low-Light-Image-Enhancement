@@ -147,3 +147,198 @@ not local contrast, so a local-contrast method is at a disadvantage on this metr
 - **What do mean ± std tell you with 15 images?** The standard deviation across images is large
   compared with differences between methods, so small gaps in mean PSNR should not be
   over-interpreted.
+
+---
+
+## Milestone 2: Zero-DCE model, losses and training code
+
+### What was built
+
+- `src/zerodce.py`: DCE-Net, the light-enhancement curve, and helpers to load weights and to
+  enhance a NumPy image.
+- `src/losses.py`: the four zero-reference losses and their weighted sum.
+- `src/train.py`: training loop with per-epoch validation (zero-reference loss, PSNR, SSIM),
+  best/last checkpoints, automatic resume, a CSV log and loss curves.
+- `notebooks/train_colab.ipynb`: clones the repo, installs requirements, unzips LOL from Drive and
+  calls `python -m src.train`. No training logic in the notebook.
+- Tests for the curve, the network, each loss, the crop dataset, and a training smoke test that
+  checks checkpoints are written and that a resumed run matches an uninterrupted one.
+
+### How the curve works
+
+`LE(x) = x + α·x·(1 − x)`, applied per pixel and per colour channel, with α in [−1, 1].
+
+- α > 0 brightens, α < 0 darkens, α = 0 leaves the pixel unchanged.
+- 0 and 1 are fixed points, and for α in [−1, 1] the output never leaves [0, 1]: no clipping,
+  nothing thrown away.
+- The curve is monotonic (derivative 1 + α(1 − 2x) ≥ 0), so a brighter input pixel never ends up
+  darker than a dimmer one in the same channel: intensity order is preserved.
+- It is differentiable, so gradients flow through it into the network.
+
+**Why iterate it 8 times.** One quadratic step can lift a value only so far (at most from x to
+2x − x²; 0.05 becomes 0.0975). Applying it repeatedly composes the steps into a much higher-order
+curve that can brighten very dark pixels strongly while barely moving bright ones. The paper's
+ablation shows a single iteration is clearly worse. Each iteration has its own α map, so the
+network predicts 8 × 3 = 24 maps.
+
+**Why per-pixel α.** A global curve (like gamma) gives every pixel with the same value the same
+output. Per-pixel α lets dark regions be lifted more than bright ones in the same image, which is
+exactly the weakness of the classical baselines found in Milestone 1.
+
+### The network (DCE-Net)
+
+Seven 3×3 conv layers with 32 channels and ReLU. Layers 5, 6 and 7 take the concatenation of the
+previous output with layers 3, 2 and 1 respectively ("symmetric concatenation", like a U-Net
+without down-sampling). The last layer outputs 24 channels through tanh, giving α in [−1, 1].
+
+- No pooling or batch normalization: the paper says they break relations between neighbouring
+  pixels, and without them the network runs on any image size.
+- 79,416 trainable parameters, matching the paper (checked by a test).
+- Weights start from N(0, 0.02) as in the paper, so α ≈ 0 initially and the untrained network
+  outputs roughly its input.
+
+### The four losses: what each enforces
+
+1. **Spatial consistency.** Average the image (over RGB) in 4×4 regions. For every region and its
+   four neighbours, the contrast |Y_i − Y_j| in the output should equal |I_i − I_j| in the input.
+   Keeps edges and local structure. *Without it:* lower contrast, washed-out regions.
+2. **Exposure control.** Mean intensity of each 16×16 patch should be close to E = 0.6. This is the
+   only term that pushes the image to get brighter. *Without it:* dark regions stay dark (the
+   paper's ablation), because α = 0 satisfies the other three losses almost perfectly.
+3. **Colour constancy.** Gray-World assumption: over the whole image, mean R, G and B should be
+   equal. Penalizes squared differences of the channel means. *Without it:* strong colour casts,
+   since each channel's curve can drift independently.
+4. **Illumination smoothness.** Total variation of the α maps: neighbouring pixels should get
+   similar curves. *Without it:* blotchy artifacts between regions.
+
+Total: `L = L_spa + L_exp + 0.5·L_col + 20·L_tvA` (paper weights). All four weights are in
+`config.yaml`, so an ablation is a config change (set a weight to 0).
+
+### Why it trains without ground truth
+
+None of the losses looks at the normal-light image. They compare the output with the input
+(structure), with a fixed brightness target (exposure), with itself (colour balance), and
+constrain the α maps (smoothness). Together they describe what a well-enhanced image looks like, so
+any dark image is a valid training example. The `high/` images are used only to measure PSNR/SSIM.
+
+Honest caveat: the best checkpoint is *selected* by validation PSNR, which uses the 35 validation
+reference images. Training is zero-reference; model selection is not.
+
+### Verification against the paper and the official code
+
+Compared with the paper (arXiv 2001.06826v2) and the official repository `Li-Chongyi/Zero-DCE`
+(`model.py`, `Myloss.py`, `lowlight_train.py`). Where they disagree I followed the paper, as the
+project brief asks.
+
+| Item | Paper | Official code | This project |
+|---|---|---|---|
+| Architecture | 7 conv, 32 ch, symmetric concat, tanh, 24 maps | Same (concat x3+x4, x2+x5, x1+x6) | Same; 79,416 params |
+| Curve | x + α·x(1−x) | x + r·(x² − x), i.e. α = −r | Paper form (equivalent, tanh is symmetric) |
+| Spatial loss | (\|Y_i−Y_j\| − \|I_i−I_j\|)², 4×4, 4 neighbours | Signed differences; zero padding adds border terms that penalize changing border brightness; two computed variables unused | Paper form, interior neighbours only |
+| Exposure loss | mean \|Y_k − E\|, 16×16, E = 0.6 | mean (Y_k − E)² | Paper form |
+| Colour loss | Σ (J_p − J_q)² | sqrt(Σ ((J_p − J_q)²)²) | Paper form |
+| Smoothness loss | (\|∇x A\| + \|∇y A\|)² | \|∇x A\|² + \|∇y A\|² | Paper form, averaged over pixels |
+| Loss weights | spa 1, exp 1, col 0.5, tvA 20 | spa 1, exp 10, col 5, tvA 200 | Paper (configurable) |
+| Init | N(0, 0.02), constant bias | N(0, 0.02), default bias | N(0, 0.02), bias 0 |
+| Optimizer | Adam (default params), lr 1e-4, batch 8 | Adam lr 1e-4, weight decay 1e-4, grad-norm clip 0.1 | Adam lr 1e-4, no weight decay, clip 0.1 |
+| Training images | SICE Part1, 2,422 images resized to 512×512 | Resized to 256×256 | LOL low-light, random 256×256 crops + flips |
+
+**What I could not verify:**
+- The equations do not say how sums are normalized over pixels and batch. I average over pixels
+  and batch everywhere. That sets the scale of each term and so how the weights balance them.
+- The official code uses different formulas *and* different weights, so it is unclear whether the
+  paper's weights were tuned for the formulas as printed. If the paper version trains badly
+  (colour casts, no brightening), the first thing to try is the official formulation.
+- The detailed architecture is in the supplementary material, which I did not read; the main text,
+  the official code and the parameter count agree.
+- The paper does not state the number of epochs or gradient clipping. Epochs = 200 (official
+  script default); clipping at 0.1 is from the code.
+
+### Difference from the paper: training data
+
+The paper trains on SICE multi-exposure sequences (under- *and* over-exposed images). Here
+Zero-DCE trains on the 450 LOL low-light training images only. Consequences:
+- The model never sees over-exposed inputs, so it should not be expected to darken them.
+- **Exposure target vs LOL references.** The LOL reference images have mean brightness 0.455
+  (our485) and 0.451 (eval15), measured on this dataset; the low-light inputs average 0.060. The
+  target is E = 0.6. The paper found little visual difference for E in [0.4, 0.7], but PSNR against
+  LOL references rewards matching their brightness, so E = 0.6 will likely produce outputs brighter
+  than the references and cost PSNR. Changing E would deviate from the paper, so the default stays.
+
+### Training engineering
+
+- **Resumable.** `last.pth` stores model, optimizer, epoch, best PSNR and history; rerunning the
+  same command resumes. Checkpoints are written to a temp file and renamed, so a Colab disconnect
+  during a save cannot corrupt the previous checkpoint.
+- **Reproducible.** Seeds are fixed and the data RNG is re-seeded every epoch from (seed, epoch),
+  so a resumed run sees exactly the same crops and order as an uninterrupted one (a test checks
+  this on CPU). GPU kernels can still add tiny nondeterministic differences.
+- **Fast data loading.** The 450 training images are decoded once and kept in memory as uint8.
+- **Checkpoints.** `best.pth` and `zerodce.pth` by validation PSNR; `last.pth` for resuming.
+  `zerodce.pth` holds only model weights (about 320 KB) and is the file that gets committed.
+- **Colab.** The notebook keeps Colab's preinstalled CUDA PyTorch and installs the rest of
+  `requirements.txt`.
+
+### Local CPU check
+
+Five epochs on my laptop CPU on real LOL data (`python -m src.train --epochs 5 --device cpu
+--num-workers 0 --output-dir checkpoints/cpu_check`), about 2 minutes per epoch. This run only
+checks that training works; it is not the final model.
+
+| Epoch | Train loss | Val loss | Val PSNR (dB) | Val SSIM |
+|---|---|---|---|---|
+| 1 | 0.527 | 0.462 | 10.56 | 0.349 |
+| 2 | 0.335 | 0.294 | 15.49 | 0.441 |
+| 3 | 0.217 | 0.185 | 13.54 | 0.357 |
+| 4 | 0.169 | 0.170 | 13.47 | 0.352 |
+| 5 | 0.160 | 0.162 | 13.14 | 0.347 |
+
+What it showed:
+- **The total loss falls every epoch**, on train and validation, so the model and losses work.
+- **The other three terms start near zero and rise.** At epoch 1 the output is almost the input
+  (α ≈ 0), which trivially satisfies spatial consistency, colour constancy and smoothness. As the
+  network learns to brighten (exposure loss 0.52 → 0.07), those terms become non-zero. That is the
+  trade-off the weights balance.
+- **Validation PSNR peaks at epoch 2 and then falls while the loss keeps improving.** Mean
+  output brightness on the validation images was 0.402 for the epoch-2 checkpoint and 0.528 at
+  epoch 5, against 0.458 for the references. The exposure loss keeps pushing towards E = 0.6, past
+  the references' brightness, so PSNR drops. This is the mismatch predicted above, and it is why
+  the best checkpoint is chosen by validation PSNR rather than by loss.
+- Lower zero-reference loss does not mean higher PSNR: the training objective and the evaluation
+  metric measure different things.
+
+### Why it is fast enough for CPU inference
+
+79K parameters and seven small convolutions (the paper reports 5.21 GFLOPs for a 256×256 input).
+The curve is a few multiply-adds per pixel. No pooling or attention, so cost grows linearly with
+the number of pixels. Measured CPU timings come in Milestone 3.
+
+### Alternatives considered and rejected
+
+- **Following the official code instead of the paper.** The brief asks for the paper; the code
+  versions are documented above as a fallback.
+- **Resizing training images instead of cropping.** Resizing 600×400 to 256×256 distorts the aspect
+  ratio and changes noise statistics; random crops keep native resolution.
+- **Supervised training on LOL pairs.** A different method (the optional U-Net stretch goal).
+  Zero-DCE's point is not needing pairs.
+- **Batch normalization.** Excluded by the paper; its statistics differ between 256×256 crops and
+  full images, and it couples pixels across the batch.
+
+### Likely interview questions
+
+- **Why must α be in [−1, 1]?** That range keeps the output in [0, 1] and the curve monotonic; tanh
+  produces exactly that range.
+- **Why predict a curve instead of the image?** A curve guarantees valid output ranges, preserves
+  intensity order and needs a far smaller network; image-to-image networks can hallucinate content.
+- **What happens without the exposure loss?** Nothing pushes the output brighter; α = 0 satisfies
+  the remaining losses.
+- **Which loss stops colour casts, and when does it fail?** Colour constancy (Gray-World). It fails
+  on scenes genuinely dominated by one colour, such as a red wall or a sunset.
+- **Is it really zero-reference if you select checkpoints by PSNR?** Training is; selection uses 35
+  references. Without any, you would take the last epoch or use a no-reference metric.
+- **How did you verify the implementation?** Parameter count matches the paper (79,416); tests
+  check the curve's range, fixed points and monotonicity and each loss on synthetic inputs; a short
+  CPU run on LOL confirmed the loss decreases and validation PSNR rises.
+- **What did you change from the paper and why?** Training data (LOL instead of SICE, as the
+  project requires), 256×256 random crops instead of 512×512 resizing, and gradient clipping from
+  the official code. Everything else follows the paper.

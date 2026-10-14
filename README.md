@@ -5,7 +5,8 @@ equalization, CLAHE) with Zero-DCE, a lightweight deep curve-estimation model im
 paper. Quality is measured with PSNR and SSIM on the LOL dataset, and a denoising study checks
 where removing noise helps.
 
-> Work in progress. Milestone 1 (data and classical baselines) is complete.
+> Work in progress. Milestones 1 (data and classical baselines) and 2 (Zero-DCE model and
+> training code) are complete.
 
 ## Setup (Windows, PowerShell)
 
@@ -40,6 +41,22 @@ ruff check .; ruff format --check .
 ```
 
 All settings live in `config.yaml`.
+
+## Training Zero-DCE
+
+Zero-DCE is trained with zero-reference losses on the LOL low-light images only; the normal-light
+images are used for validation PSNR and evaluation. The paper trained on the SICE multi-exposure
+dataset instead, so results are not directly comparable with the paper's numbers.
+
+On Google Colab (GPU), open `notebooks/train_colab.ipynb`, set `REPO_URL`, upload `LOL.zip` to
+`MyDrive/low-light-enhancement/`, and run all cells. If the session disconnects, run all cells
+again: training resumes from the last checkpoint on Drive.
+
+Locally (CPU, slow; for checking only):
+
+```powershell
+python -m src.train --epochs 2 --device cpu --num-workers 0 --output-dir checkpoints/cpu_check
+```
 
 ## Results
 

@@ -17,5 +17,27 @@ classical:
   # A 1x1 grid is excluded: it turns CLAHE into global clipped equalization, which is no longer adaptive.
   clahe_tile_grid: [2, 4, 8, 16]
 
+zerodce:
+  features: 32
+  iterations: 8
+  exposure_level: 0.6     # well-exposedness level E
+  exposure_patch: 16      # non-overlapping patch size for the exposure loss
+  spatial_region: 4       # region size for the spatial consistency loss
+  loss_weights:           # paper Eq. 8: L_spa + L_exp + 0.5 L_col + 20 L_tvA
+    spatial: 1.0
+    exposure: 1.0
+    color: 0.5
+    illumination: 20.0
+
+train:
+  output_dir: checkpoints
+  crop_size: 256
+  batch_size: 8
+  epochs: 200
+  lr: 1.0e-4
+  weight_decay: 0.0       # paper: Adam with default parameters
+  grad_clip_norm: 0.1     # not in the paper; taken from the official implementation
+  num_workers: 2
+
 evaluation:
   timing_warmup: 1
