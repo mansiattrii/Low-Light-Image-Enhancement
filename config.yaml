@@ -66,3 +66,13 @@ evaluation:
       settings: "E=0.45, paper loss equations (ablation: mean brightness of training references)"
       run_dir: checkpoints/zerodce_e045
   figure_images: [1.png, 111.png, 23.png, 748.png]
+
+denoise:
+  results_dir: results/denoise
+  nlm_h_grid: [1, 2, 3, 4, 5, 7, 10, 15, 20, 25, 30, 40]   # 8-bit levels; same strength for luma and colour
+  nlm_template_window: 7                        # OpenCV defaults
+  nlm_search_window: 21
+  bilateral_sigma_color_grid: [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 1.0]   # intensity in [0, 1]
+  bilateral_sigma_space_grid: [2, 4, 8]                                  # pixels
+  figure_images: [55.png, 1.png]
+  figure_crop: 96

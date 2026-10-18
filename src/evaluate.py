@@ -174,6 +174,7 @@ def write_results(
     out_dir: Path,
     stem: str,
     repeats: int = 1,
+    command: str = "python -m src.evaluate",
 ) -> None:
     """Write per-image scores, the summary CSV and the Markdown table."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -241,7 +242,7 @@ def write_results(
         f"{torch.get_num_threads()} PyTorch threads; GPU: {gpu}. Python "
         f"{platform.python_version()}, PyTorch {torch.__version__}, OpenCV {cv2.__version__}, "
         f"scikit-image {skimage.__version__}",
-        f"- Generated: {date.today().isoformat()} by `python -m src.evaluate`",
+        f"- Generated: {date.today().isoformat()} by `{command}`",
         "",
         "| Method | Settings | PSNR (dB) ↑ | SSIM ↑ | Brightness | CPU ms / image "
         "| GPU ms / image | Learned params |",

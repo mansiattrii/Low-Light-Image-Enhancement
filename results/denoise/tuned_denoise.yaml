@@ -1,0 +1,22 @@
+selection:
+  split: validation (35 pairs from our485)
+  criterion: mean PSNR
+  enhancer: zerodce (weights/zerodce.pth)
+zerodce->nlm:
+  h: 20
+  val_psnr: 17.0055
+  val_ssim: 0.6857
+nlm->zerodce:
+  h: 10
+  val_psnr: 16.6223
+  val_ssim: 0.6566
+zerodce->bilateral:
+  sigma_color: 1.0
+  sigma_space: 2
+  val_psnr: 17.3626
+  val_ssim: 0.7329
+bilateral->zerodce:
+  sigma_color: 0.1
+  sigma_space: 2
+  val_psnr: 17.3498
+  val_ssim: 0.7415

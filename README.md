@@ -6,7 +6,7 @@ paper. Quality is measured with PSNR and SSIM on the LOL dataset, and a denoisin
 where removing noise helps.
 
 > Work in progress. Milestones 1 (data and classical baselines), 2 (Zero-DCE model and training
-> code) and 3 (training and full evaluation) are complete.
+> code), 3 (training and full evaluation) and 4 (denoising study) are complete.
 
 ## Setup (Windows, PowerShell)
 
@@ -47,6 +47,7 @@ python -m src.evaluate                  # evaluate on eval15 -> results/results.
 python -m src.evaluate --split val      # evaluate on the validation split
 python -m src.figures                   # comparison grid, failure cases, checkpoint comparison
 python -m src.analysis                  # best-vs-last checkpoint diagnostic (needs checkpoints/)
+python -m src.denoise                   # denoising study -> results/denoise/denoise_results.md
 python -m src.enhance --input dark.jpg --output out.png --method zerodce
 pytest
 ruff check .; ruff format --check .
@@ -86,5 +87,6 @@ training with them degrades after a few epochs; see `NOTES.md` (Milestone 3).
 
 ## Results
 
-See [results/results.md](results/results.md). The full write-up will be added in the final
+See [results/results.md](results/results.md) and, for denoising before or after Zero-DCE,
+[results/denoise/denoise_results.md](results/denoise/denoise_results.md). The full write-up will be added in the final
 milestone.

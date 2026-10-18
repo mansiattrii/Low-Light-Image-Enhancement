@@ -1,0 +1,79 @@
+pipeline,params,psnr,ssim
+zerodce->nlm,h=1,16.0778,0.4372
+nlm->zerodce,h=1,15.5543,0.4053
+zerodce->nlm,h=2,16.1161,0.4688
+nlm->zerodce,h=2,15.6587,0.4685
+zerodce->nlm,h=3,16.1594,0.4937
+nlm->zerodce,h=3,16.0212,0.5440
+zerodce->nlm,h=4,16.2072,0.5136
+nlm->zerodce,h=4,16.4029,0.6162
+zerodce->nlm,h=5,16.2702,0.5350
+nlm->zerodce,h=5,16.5265,0.6550
+zerodce->nlm,h=7,16.4204,0.5790
+nlm->zerodce,h=7,16.5978,0.6674
+zerodce->nlm,h=10,16.6604,0.6337
+nlm->zerodce,h=10,16.6223,0.6566
+zerodce->nlm,h=15,16.9401,0.6795
+nlm->zerodce,h=15,16.5632,0.6306
+zerodce->nlm,h=20,17.0055,0.6857
+nlm->zerodce,h=20,16.4556,0.6088
+zerodce->nlm,h=25,16.9753,0.6852
+nlm->zerodce,h=25,16.3579,0.5925
+zerodce->nlm,h=30,16.9041,0.6767
+nlm->zerodce,h=30,16.2739,0.5799
+zerodce->nlm,h=40,16.7484,0.6552
+nlm->zerodce,h=40,16.1383,0.5618
+zerodce->bilateral,"sigma_color=0.005, sigma_space=2",16.0751,0.4272
+bilateral->zerodce,"sigma_color=0.005, sigma_space=2",16.2845,0.4582
+zerodce->bilateral,"sigma_color=0.005, sigma_space=4",16.0754,0.4274
+bilateral->zerodce,"sigma_color=0.005, sigma_space=4",16.3748,0.4758
+zerodce->bilateral,"sigma_color=0.005, sigma_space=8",16.0759,0.4277
+bilateral->zerodce,"sigma_color=0.005, sigma_space=8",16.4236,0.4856
+zerodce->bilateral,"sigma_color=0.01, sigma_space=2",16.0759,0.4284
+bilateral->zerodce,"sigma_color=0.01, sigma_space=2",16.6887,0.5471
+zerodce->bilateral,"sigma_color=0.01, sigma_space=4",16.0771,0.4296
+bilateral->zerodce,"sigma_color=0.01, sigma_space=4",16.7902,0.5787
+zerodce->bilateral,"sigma_color=0.01, sigma_space=8",16.0791,0.4310
+bilateral->zerodce,"sigma_color=0.01, sigma_space=8",16.8126,0.5835
+zerodce->bilateral,"sigma_color=0.02, sigma_space=2",16.0822,0.4348
+bilateral->zerodce,"sigma_color=0.02, sigma_space=2",17.0956,0.6781
+zerodce->bilateral,"sigma_color=0.02, sigma_space=4",16.0889,0.4393
+bilateral->zerodce,"sigma_color=0.02, sigma_space=4",17.1483,0.7066
+zerodce->bilateral,"sigma_color=0.02, sigma_space=8",16.0962,0.4427
+bilateral->zerodce,"sigma_color=0.02, sigma_space=8",17.1326,0.6985
+zerodce->bilateral,"sigma_color=0.05, sigma_space=2",16.1622,0.4681
+bilateral->zerodce,"sigma_color=0.05, sigma_space=2",17.3350,0.7471
+zerodce->bilateral,"sigma_color=0.05, sigma_space=4",16.2099,0.4813
+bilateral->zerodce,"sigma_color=0.05, sigma_space=4",17.3427,0.7600
+zerodce->bilateral,"sigma_color=0.05, sigma_space=8",16.2423,0.4877
+bilateral->zerodce,"sigma_color=0.05, sigma_space=8",17.2647,0.7466
+zerodce->bilateral,"sigma_color=0.1, sigma_space=2",16.4127,0.5286
+bilateral->zerodce,"sigma_color=0.1, sigma_space=2",17.3498,0.7415
+zerodce->bilateral,"sigma_color=0.1, sigma_space=4",16.5106,0.5494
+bilateral->zerodce,"sigma_color=0.1, sigma_space=4",17.2437,0.7342
+zerodce->bilateral,"sigma_color=0.1, sigma_space=8",16.5451,0.5539
+bilateral->zerodce,"sigma_color=0.1, sigma_space=8",16.9907,0.7108
+zerodce->bilateral,"sigma_color=0.2, sigma_space=2",16.8646,0.6273
+bilateral->zerodce,"sigma_color=0.2, sigma_space=2",17.2404,0.7266
+zerodce->bilateral,"sigma_color=0.2, sigma_space=4",16.9345,0.6488
+bilateral->zerodce,"sigma_color=0.2, sigma_space=4",16.9611,0.6965
+zerodce->bilateral,"sigma_color=0.2, sigma_space=8",16.9191,0.6425
+bilateral->zerodce,"sigma_color=0.2, sigma_space=8",16.5070,0.6573
+zerodce->bilateral,"sigma_color=0.3, sigma_space=2",17.0849,0.6863
+bilateral->zerodce,"sigma_color=0.3, sigma_space=2",17.1771,0.7195
+zerodce->bilateral,"sigma_color=0.3, sigma_space=4",17.1210,0.7037
+bilateral->zerodce,"sigma_color=0.3, sigma_space=4",16.8302,0.6802
+zerodce->bilateral,"sigma_color=0.3, sigma_space=8",17.0796,0.6909
+bilateral->zerodce,"sigma_color=0.3, sigma_space=8",16.3087,0.6343
+zerodce->bilateral,"sigma_color=0.5, sigma_space=2",17.2678,0.7286
+bilateral->zerodce,"sigma_color=0.5, sigma_space=2",17.1304,0.7144
+zerodce->bilateral,"sigma_color=0.5, sigma_space=4",17.2768,0.7365
+bilateral->zerodce,"sigma_color=0.5, sigma_space=4",16.7396,0.6691
+zerodce->bilateral,"sigma_color=0.5, sigma_space=8",17.1915,0.7189
+bilateral->zerodce,"sigma_color=0.5, sigma_space=8",16.1768,0.6188
+zerodce->bilateral,"sigma_color=1.0, sigma_space=2",17.3626,0.7329
+bilateral->zerodce,"sigma_color=1.0, sigma_space=2",17.1061,0.7118
+zerodce->bilateral,"sigma_color=1.0, sigma_space=4",17.2537,0.7167
+bilateral->zerodce,"sigma_color=1.0, sigma_space=4",16.6936,0.6637
+zerodce->bilateral,"sigma_color=1.0, sigma_space=8",16.9682,0.6857
+bilateral->zerodce,"sigma_color=1.0, sigma_space=8",16.1110,0.6113

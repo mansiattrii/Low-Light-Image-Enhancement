@@ -516,3 +516,174 @@ version is still implemented, tested, trained and reported.
 - **What would you try next?** A stronger smoothness weight with the paper's formulas (to separate
   formula from weight effects), a no-reference quality metric for checkpoint selection, and
   Zero-DCE++ (downsampled curve estimation) for speed.
+
+---
+
+## Milestone 4: denoising study
+
+### What was built
+
+- `src/denoise.py` (`python -m src.denoise`): compares five pipelines built on the default
+  Zero-DCE model: enhance only, enhance → denoise and denoise → enhance, each with OpenCV's
+  non-local means (NLM) and bilateral filter. It tunes each filter's strength on the validation
+  split, scores every pipeline on eval15, estimates the noise left in each output, and draws
+  `results/denoise/noise_amplification.png`.
+- Results in `results/denoise/`: `denoise_results.md` (main table and noise table), per-image
+  CSVs, `tuned_denoise.yaml` and the full tuning grid in `tuning_denoise_val.csv`.
+- `tests/test_denoise.py`: synthetic-image tests (filters reduce noise without shifting
+  brightness, no RGB/BGR swap, pipeline order, noise estimator, crop selection).
+
+### Why noise gets worse when you brighten
+
+A dark image has a weak signal, and the sensor noise is large compared with it. Zero-DCE
+multiplies every dark pixel by a large gain: on eval15 the mean brightness goes from 0.059 to
+0.506, roughly 8.6× on average and more in the darkest regions. Noise is multiplied by the same
+gain, so a speckle of 1–2 intensity levels in the input becomes 10–20 levels in the output. The
+estimated noise in the Zero-DCE output is 9.88 levels, against 1.88 in the reference photos.
+
+### The two filters
+
+- **Non-local means (NLM).** For each pixel it searches a 21×21 neighbourhood for 7×7 patches
+  that look like the patch around that pixel, and averages the pixels whose patches are similar.
+  The strength `h` controls how different two patches can be and still be averaged. It works well
+  on repeated texture and is the stronger classical denoiser, but it is slower (about 0.3 s per
+  image here). OpenCV's colour version works in LAB; I use the same `h` for brightness and colour.
+- **Bilateral filter.** A weighted average of nearby pixels. Weights fall off with distance
+  (`sigma_space`) and with intensity difference (`sigma_color`), so pixels across a strong edge
+  are not mixed. That keeps edges sharp. It is very fast (a few ms).
+
+### Order matters for the settings
+
+- **Denoise before enhancing:** the filter works on the dark image, where noise is only a few
+  8-bit levels and so is all the content (values mostly below 64). Any detail smaller than the
+  filter's threshold is erased, and the brightening then magnifies the flat result.
+- **Denoise after enhancing:** the noise is amplified but so is the content, and the filter sees
+  both at a visible scale.
+
+Because the noise has a different size in each order, one strength cannot be fair to both.
+Each (filter, order) pair is tuned separately on the 35 validation images by mean PSNR, the same
+protocol as the classical baselines. eval15 is never used to choose anything.
+
+**Grid edge, fixed before reporting.** In the first run, two of the four chosen settings sat at the
+largest value in the grid (NLM h = 20 and bilateral sigma_color = 0.3 for enhance → denoise). That
+means the grid, not the data, chose the setting, which would have made the "after" order look
+worse than it is. I widened both grids. NLM after-enhancement now peaks inside the grid
+(h = 20, falling for 25, 30, 40). Bilateral after-enhancement chose sigma_color = 1.0, again the
+largest value, so I checked beyond it once on validation (not saved in `results/`): PSNR falls
+from 17.36 dB at 1.0 to 17.30 at 2.0, 17.26 at 5.0 and 17.25 at 100. So 1.0 is a real peak.
+
+### Measuring noise without a reference
+
+PSNR and SSIM compare with the reference, so they mix noise with brightness and colour errors.
+For a direct noise measure I estimate the noise standard deviation of each output on its own:
+take the finest diagonal Haar wavelet detail of each 2×2 block, `(a − b − c + d) / 2`. For a smooth
+image this is close to zero, so its spread is mostly noise, and `median(|d|) / 0.6745` estimates
+the noise standard deviation (Donoho's rule; the median ignores the few large values at edges).
+
+- Implemented directly (a few lines of NumPy) instead of `skimage.restoration.estimate_sigma`,
+  which would add the PyWavelets dependency.
+- Computed before rounding to 8 bits. My first version rounded first, and very smooth outputs
+  showed exactly 0.00: more than half of the rounded details were exactly zero, so the median was 0.
+- Limitation: fine texture counts as "noise" too. An output well below the reference (1.88 levels)
+  has lost real detail, not just noise.
+
+### Results on eval15 (`results/denoise/denoise_results.md`)
+
+| Pipeline | Tuned settings | PSNR (dB) | SSIM | Noise σ (levels) | CPU ms |
+|---|---|---|---|---|---|
+| Zero-DCE only | – | 16.88 ± 3.55 | 0.525 | 9.88 | 223 |
+| Zero-DCE → NLM | h = 20 | 17.49 ± 3.77 | 0.691 | 0.48 | 590 |
+| NLM → Zero-DCE | h = 10 | 17.50 ± 3.92 | 0.696 | 0.01 | 587 |
+| Zero-DCE → bilateral | sigma_color = 1.0, sigma_space = 2 | **17.82 ± 4.06** | 0.745 | 0.58 | 224 |
+| bilateral → Zero-DCE | sigma_color = 0.1, sigma_space = 2 | 17.73 ± 4.08 | **0.755** | 0.59 | 226 |
+| Reference | – | – | – | 1.88 | – |
+
+The ± spread is across images and is large, so I also compared pipelines image by image
+(paired differences against Zero-DCE only, from `denoise_results_per_image.csv`):
+
+| Pipeline | PSNR gain, mean (range) | Better PSNR on | SSIM gain | Better SSIM on |
+|---|---|---|---|---|
+| Zero-DCE → NLM | +0.61 (−0.27 to +1.60) | 14/15 | +0.166 | 15/15 |
+| NLM → Zero-DCE | +0.62 (−0.40 to +1.58) | 13/15 | +0.171 | 15/15 |
+| Zero-DCE → bilateral | +0.94 (+0.07 to +2.48) | 15/15 | +0.219 | 15/15 |
+| bilateral → Zero-DCE | +0.84 (−0.05 to +2.82) | 14/15 | +0.230 | 15/15 |
+
+### What the study shows
+
+1. **Denoising helps, consistently.** Every pipeline beats Zero-DCE alone on SSIM for all 15
+   images, and on PSNR for 13–15 of 15. SSIM gains are large (+0.17 to +0.23) because SSIM's
+   structure term is very sensitive to noise. PSNR gains are modest (+0.6 to +0.9 dB) because
+   PSNR is dominated by brightness and colour errors that a denoiser cannot fix.
+2. **The order barely matters on the metrics.** NLM before vs after differs by 0.01 dB. For the
+   bilateral filter, after-enhancement has slightly higher PSNR (+0.10 dB, better on 11 of 15) and
+   before-enhancement slightly higher SSIM (+0.011, better on 14 of 15). With 15 images I call
+   this a tie on numbers. The orders do differ in how the images look (point 5).
+3. **The bilateral filter beat NLM, and is about 2.6× cheaper in total time.** The bilateral
+   pipelines add almost nothing to Zero-DCE's time; NLM adds about 0.35 s per image. I did not
+   isolate why NLM lost. Plausible reasons: the noise after Zero-DCE is not the uniform Gaussian
+   noise NLM's strength assumes (its size depends on each pixel's gain, and it has blotchy colour),
+   and I used one strength for brightness and colour.
+4. **PSNR-tuned denoising over-smooths.** All denoised outputs have less estimated noise (0.01–0.59
+   levels) than the reference photos (1.88). They are smoother than the ground truth, so fine
+   texture is gone: in `noise_amplification.png` the drawer handle on 55.png loses its pattern and
+   the book spines on 1.png blur. The tuned enhance → bilateral setting (sigma_color = 1.0) is
+   close to a plain blur: its output is within 1.4 levels on average of the same filter at
+   sigma_color = 100, where the edge-preserving part has no effect. The metrics reward this
+   because the error from noise is larger than the error from lost detail. A person might prefer
+   a milder setting, and PSNR/SSIM cannot tell them that.
+5. **Denoising before brightening flattens and posterizes.** NLM → Zero-DCE has an estimated
+   noise of 0.01 levels: almost every 2×2 block is perfectly flat. The figure shows flat patches
+   with visible steps between them. Denoising the dark 8-bit image leaves smooth areas at one
+   integer level, and brightening then magnifies the steps between levels (banding). The
+   bilateral before-enhancement setting is gentler (sigma_color = 0.1) and avoids the worst of it.
+6. **Denoising does not fix the worst image.** 179.png stays at about 9.5 dB in every pipeline. Its
+   error is brightness and colour (Milestone 3), not noise.
+
+### Recommendation for the app
+
+Offer denoising as an option, with the bilateral filter, because it is the best on both metrics
+and costs almost nothing. Default it to enhance → bilateral, which keeps the enhancement step
+identical with or without denoising. A milder strength than the PSNR-tuned one may look better on
+real photos. That is a visual judgement I will make on my own photos, not something the metrics
+can choose.
+
+### Alternatives considered and rejected
+
+- **One shared strength for both orders.** Unfair: the noise is about 8× larger after
+  enhancement, so a setting good for one order is wrong for the other.
+- **Tuning on eval15.** Never (test-set leakage).
+- **Gaussian or median blur.** Not edge-aware. The bilateral filter becomes a Gaussian blur as
+  sigma_color grows, so its grid already covers that end.
+- **BM3D or a learned denoiser (DnCNN, Restormer).** Stronger, but BM3D is slow and not in
+  OpenCV, and a learned denoiser needs paired noisy/clean training data. The brief asks for
+  classical OpenCV denoising; these are listed as future work.
+- **Denoising inside Zero-DCE (e.g. a denoising loss).** Changes the method being studied; this
+  milestone measures what a simple post-processing step can do.
+- **Separate brightness and colour strengths for NLM.** A reasonable next step (colour noise is
+  blotchier), left out to keep the grid small and the two filters comparable.
+
+### Likely interview questions
+
+- **Why does brightening amplify noise?** Brightening multiplies pixel values, and noise is part of
+  the value. Zero-DCE raises mean brightness about 8.6×, and the estimated noise goes from about
+  the reference's 1.9 levels to 9.9.
+- **Should you denoise before or after enhancement?** On these metrics it is a tie: the paired
+  differences are 0.01–0.10 dB. Before has a clean argument (the noise is simplest before a
+  nonlinear curve changes it), but on 8-bit dark images it flattens detail that is only a few
+  levels deep and causes banding. After sees noise and detail at a visible scale. I default to
+  after.
+- **Why tune each order separately?** The noise is a different size in each position, so the right
+  filter strength is different.
+- **Why did the bilateral filter beat NLM?** On these images, yes, and it is much faster. I have
+  hypotheses (non-uniform, colour-blotchy noise after the curve, one shared NLM strength) but
+  did not isolate the cause.
+- **Do higher PSNR/SSIM mean better-looking images here?** Not necessarily. The tuned settings
+  produce outputs smoother than the reference (noise estimate 0.5 vs 1.9 levels), which removes
+  texture. Both metrics reward blur over noise.
+- **How did you measure noise without ground truth?** The finest diagonal Haar wavelet detail is
+  nearly zero for clean images, so its median absolute value / 0.6745 estimates the noise
+  standard deviation. It also counts fine texture, so it is only meaningful relative to the
+  reference and other pipelines.
+- **What went wrong along the way?** The first tuning grid was too narrow (chosen values at the
+  edge), and the first noise estimator rounded to 8 bits and reported a meaningless 0. Both were
+  caught before reporting and are documented above.

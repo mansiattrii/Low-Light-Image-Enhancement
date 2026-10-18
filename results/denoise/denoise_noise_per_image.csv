@@ -1,0 +1,91 @@
+pipeline,image,noise_sigma
+reference,1.png,1.4826
+reference,111.png,1.4826
+reference,146.png,1.4826
+reference,179.png,2.2239
+reference,22.png,1.7297
+reference,23.png,1.7297
+reference,493.png,2.7181
+reference,547.png,0.7413
+reference,55.png,1.4826
+reference,665.png,2.4710
+reference,669.png,1.7297
+reference,748.png,2.2239
+reference,778.png,3.2123
+reference,780.png,1.7297
+reference,79.png,1.7297
+zerodce (no denoising),1.png,7.5849
+zerodce (no denoising),111.png,6.5553
+zerodce (no denoising),146.png,4.3996
+zerodce (no denoising),179.png,7.2604
+zerodce (no denoising),22.png,6.0238
+zerodce (no denoising),23.png,12.4953
+zerodce (no denoising),493.png,10.5989
+zerodce (no denoising),547.png,9.0831
+zerodce (no denoising),55.png,12.4614
+zerodce (no denoising),665.png,16.1912
+zerodce (no denoising),669.png,8.2709
+zerodce (no denoising),748.png,11.9698
+zerodce (no denoising),778.png,17.2995
+zerodce (no denoising),780.png,12.5789
+zerodce (no denoising),79.png,5.4989
+zerodce->nlm,1.png,0.4942
+zerodce->nlm,111.png,0.0000
+zerodce->nlm,146.png,0.0000
+zerodce->nlm,179.png,0.0000
+zerodce->nlm,22.png,0.0000
+zerodce->nlm,23.png,0.7413
+zerodce->nlm,493.png,1.2355
+zerodce->nlm,547.png,0.0000
+zerodce->nlm,55.png,0.7413
+zerodce->nlm,665.png,0.7413
+zerodce->nlm,669.png,0.0000
+zerodce->nlm,748.png,0.4942
+zerodce->nlm,778.png,1.9768
+zerodce->nlm,780.png,0.7413
+zerodce->nlm,79.png,0.0000
+nlm->zerodce,1.png,0.0120
+nlm->zerodce,111.png,0.0109
+nlm->zerodce,146.png,0.0063
+nlm->zerodce,179.png,0.0099
+nlm->zerodce,22.png,0.0076
+nlm->zerodce,23.png,0.0044
+nlm->zerodce,493.png,0.0097
+nlm->zerodce,547.png,0.0135
+nlm->zerodce,55.png,0.0040
+nlm->zerodce,665.png,0.0064
+nlm->zerodce,669.png,0.0097
+nlm->zerodce,748.png,0.0227
+nlm->zerodce,778.png,0.0125
+nlm->zerodce,780.png,0.0058
+nlm->zerodce,79.png,0.0074
+zerodce->bilateral,1.png,0.5233
+zerodce->bilateral,111.png,0.3470
+zerodce->bilateral,146.png,0.2431
+zerodce->bilateral,179.png,0.4141
+zerodce->bilateral,22.png,0.3628
+zerodce->bilateral,23.png,0.6658
+zerodce->bilateral,493.png,0.6629
+zerodce->bilateral,547.png,0.5353
+zerodce->bilateral,55.png,0.6355
+zerodce->bilateral,665.png,0.8758
+zerodce->bilateral,669.png,0.4610
+zerodce->bilateral,748.png,0.7554
+zerodce->bilateral,778.png,1.2095
+zerodce->bilateral,780.png,0.7533
+zerodce->bilateral,79.png,0.2830
+bilateral->zerodce,1.png,0.5401
+bilateral->zerodce,111.png,0.3620
+bilateral->zerodce,146.png,0.2494
+bilateral->zerodce,179.png,0.4684
+bilateral->zerodce,22.png,0.3822
+bilateral->zerodce,23.png,0.6634
+bilateral->zerodce,493.png,0.6445
+bilateral->zerodce,547.png,0.5445
+bilateral->zerodce,55.png,0.6368
+bilateral->zerodce,665.png,0.8463
+bilateral->zerodce,669.png,0.4763
+bilateral->zerodce,748.png,0.7886
+bilateral->zerodce,778.png,1.2210
+bilateral->zerodce,780.png,0.7708
+bilateral->zerodce,79.png,0.3233

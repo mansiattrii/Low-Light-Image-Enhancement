@@ -1,0 +1,76 @@
+method,image,psnr,ssim,brightness,cpu_ms
+zerodce (no denoising),1.png,16.6531,0.6201,0.5685,222.23
+zerodce (no denoising),111.png,20.9056,0.6392,0.6115,198.99
+zerodce (no denoising),146.png,18.5558,0.7308,0.6257,222.33
+zerodce (no denoising),179.png,9.4813,0.4858,0.6031,227.80
+zerodce (no denoising),22.png,20.7977,0.6366,0.5572,226.73
+zerodce (no denoising),23.png,14.2934,0.4279,0.4038,222.58
+zerodce (no denoising),493.png,17.8013,0.4825,0.3186,229.12
+zerodce (no denoising),547.png,14.0033,0.4768,0.5690,204.35
+zerodce (no denoising),55.png,13.6931,0.4267,0.3979,226.26
+zerodce (no denoising),665.png,18.9349,0.3744,0.4020,226.84
+zerodce (no denoising),669.png,19.2034,0.5435,0.5862,221.01
+zerodce (no denoising),748.png,14.2661,0.4976,0.5233,227.53
+zerodce (no denoising),778.png,19.6121,0.5049,0.3396,232.40
+zerodce (no denoising),780.png,13.2415,0.3561,0.4355,228.90
+zerodce (no denoising),79.png,21.7884,0.6739,0.6490,224.75
+zerodce->nlm,1.png,17.5447,0.7337,0.5637,590.08
+zerodce->nlm,111.png,21.6633,0.8230,0.6101,584.90
+zerodce->nlm,146.png,18.6105,0.7893,0.6260,582.68
+zerodce->nlm,179.png,9.5584,0.5028,0.6016,589.17
+zerodce->nlm,22.png,21.9736,0.7533,0.5552,580.61
+zerodce->nlm,23.png,14.5701,0.6631,0.4007,612.23
+zerodce->nlm,493.png,18.7925,0.5997,0.3125,592.95
+zerodce->nlm,547.png,14.3869,0.7038,0.5670,598.56
+zerodce->nlm,55.png,13.9256,0.6879,0.3950,586.79
+zerodce->nlm,665.png,20.5371,0.6770,0.3974,591.79
+zerodce->nlm,669.png,19.9036,0.7881,0.5856,596.88
+zerodce->nlm,748.png,14.7100,0.6657,0.5200,581.32
+zerodce->nlm,778.png,20.9086,0.5949,0.3329,581.38
+zerodce->nlm,780.png,13.7836,0.6274,0.4311,594.73
+zerodce->nlm,79.png,21.5227,0.7612,0.6487,590.26
+nlm->zerodce,1.png,17.6967,0.7585,0.5617,603.98
+nlm->zerodce,111.png,22.0807,0.8391,0.6070,593.80
+nlm->zerodce,146.png,19.0397,0.8314,0.6195,588.15
+nlm->zerodce,179.png,9.5792,0.5323,0.6006,571.71
+nlm->zerodce,22.png,22.3821,0.7514,0.5473,583.67
+nlm->zerodce,23.png,13.9383,0.6105,0.3854,593.26
+nlm->zerodce,493.png,19.0147,0.5821,0.2972,605.89
+nlm->zerodce,547.png,14.4898,0.7097,0.5638,571.36
+nlm->zerodce,55.png,13.2919,0.6264,0.3797,585.62
+nlm->zerodce,665.png,19.3670,0.6330,0.3859,595.31
+nlm->zerodce,669.png,20.0879,0.7913,0.5819,582.56
+nlm->zerodce,748.png,14.8410,0.7019,0.5176,589.29
+nlm->zerodce,778.png,19.9958,0.5380,0.3183,584.67
+nlm->zerodce,780.png,13.9820,0.7117,0.4201,579.43
+nlm->zerodce,79.png,22.7144,0.8212,0.6465,578.41
+zerodce->bilateral,1.png,17.4257,0.7895,0.5689,210.24
+zerodce->bilateral,111.png,22.1300,0.8754,0.6117,227.64
+zerodce->bilateral,146.png,19.0152,0.8322,0.6266,229.33
+zerodce->bilateral,179.png,9.5541,0.5473,0.6035,225.58
+zerodce->bilateral,22.png,22.6149,0.8199,0.5574,233.23
+zerodce->bilateral,23.png,14.7681,0.7187,0.4038,221.70
+zerodce->bilateral,493.png,18.9304,0.6636,0.3184,232.72
+zerodce->bilateral,547.png,14.3715,0.7446,0.5693,207.44
+zerodce->bilateral,55.png,14.0926,0.7227,0.3978,230.15
+zerodce->bilateral,665.png,21.0920,0.7056,0.4023,229.20
+zerodce->bilateral,669.png,20.3920,0.8478,0.5865,230.86
+zerodce->bilateral,748.png,14.7339,0.7581,0.5236,227.38
+zerodce->bilateral,778.png,22.0956,0.6772,0.3388,213.86
+zerodce->bilateral,780.png,13.6953,0.6369,0.4355,220.60
+zerodce->bilateral,79.png,22.4282,0.8285,0.6494,211.88
+bilateral->zerodce,1.png,17.0445,0.8043,0.5766,232.74
+bilateral->zerodce,111.png,21.9730,0.8847,0.6158,231.97
+bilateral->zerodce,146.png,18.7850,0.8598,0.6318,230.19
+bilateral->zerodce,179.png,9.4275,0.5668,0.6091,221.46
+bilateral->zerodce,22.png,22.2976,0.8296,0.5629,225.20
+bilateral->zerodce,23.png,15.0840,0.7254,0.4107,233.97
+bilateral->zerodce,493.png,18.3868,0.6479,0.3270,231.29
+bilateral->zerodce,547.png,14.1392,0.7474,0.5754,229.61
+bilateral->zerodce,55.png,14.4116,0.7297,0.4053,231.49
+bilateral->zerodce,665.png,21.7552,0.7090,0.4104,233.30
+bilateral->zerodce,669.png,20.0064,0.8518,0.5919,215.26
+bilateral->zerodce,748.png,14.4549,0.7778,0.5315,212.23
+bilateral->zerodce,778.png,22.2133,0.6968,0.3521,230.76
+bilateral->zerodce,780.png,13.4981,0.6403,0.4429,210.45
+bilateral->zerodce,79.png,22.4174,0.8543,0.6528,215.68

@@ -30,8 +30,14 @@ def _method_columns(config: dict[str, Any]) -> list[Method]:
     return [m for m in build_methods(config) if m.name != "input (no enhancement)"]
 
 
-def _show(ax: Any, image: np.ndarray, title: str | None = None, caption: str | None = None) -> None:
-    ax.imshow(np.clip(image, 0.0, 1.0))
+def _show(
+    ax: Any,
+    image: np.ndarray,
+    title: str | None = None,
+    caption: str | None = None,
+    interpolation: str | None = None,
+) -> None:
+    ax.imshow(np.clip(image, 0.0, 1.0), interpolation=interpolation)
     ax.set_xticks([])
     ax.set_yticks([])
     for spine in ax.spines.values():
