@@ -50,6 +50,28 @@ def clahe(image: np.ndarray, clip_limit: float, tile_size: int) -> np.ndarray:
     return cv2.cvtColor(lab, cv2.COLOR_LAB2RGB).astype(np.float32) / 255.0
 
 
+def nlm_denoise(image: np.ndarray, h: float, template: int = 7, search: int = 21) -> np.ndarray:
+    """OpenCV non-local means on an RGB image in [0, 1]; ``h`` is in 8-bit intensity levels.
+
+    The colour version works in LAB and expects BGR input, so the channels are swapped
+    around the call. The same strength is used for luminance and colour.
+    """
+    bgr = cv2.cvtColor(to_uint8(image), cv2.COLOR_RGB2BGR)
+    out = cv2.fastNlMeansDenoisingColored(bgr, None, h, h, template, search)
+    return cv2.cvtColor(out, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
+
+
+def bilateral_denoise(image: np.ndarray, sigma_color: float, sigma_space: float) -> np.ndarray:
+    """Bilateral filter on a float RGB image; ``sigma_color`` is in [0, 1] intensity units.
+
+    The window diameter is derived by OpenCV from ``sigma_space``.
+    """
+    out = cv2.bilateralFilter(
+        np.ascontiguousarray(image, dtype=np.float32), 0, sigma_color, sigma_space
+    )
+    return np.clip(out, 0.0, 1.0).astype(np.float32)
+
+
 def build_classical_methods(params: dict[str, Any]) -> dict[str, Enhancer]:
     """Create the classical enhancers from tuned parameters (see ``tuned_params.yaml``)."""
     gamma = params["gamma"]["gamma"]

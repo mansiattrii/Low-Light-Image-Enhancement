@@ -6,7 +6,8 @@ paper. Quality is measured with PSNR and SSIM on the LOL dataset, and a denoisin
 where removing noise helps.
 
 > Work in progress. Milestones 1 (data and classical baselines), 2 (Zero-DCE model and training
-> code), 3 (training and full evaluation) and 4 (denoising study) are complete.
+> code), 3 (training and full evaluation), 4 (denoising study) and 5 (API, demo, Docker and CI)
+> are complete.
 
 ## Setup (Windows, PowerShell)
 
@@ -14,15 +15,17 @@ where removing noise helps.
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-`requirements.txt` installs the CPU build of PyTorch, which is enough for inference. To train on
-an NVIDIA GPU, replace it with the CUDA build of the same version (check `nvidia-smi` for the
-CUDA version your driver supports):
+`requirements.txt` has what the project needs to run; `requirements-dev.txt` adds pytest, ruff
+and httpx. On Windows, PyPI's PyTorch wheel is the CPU build, which is enough for inference. On
+Linux the default wheel bundles CUDA, so the Dockerfile and CI install the CPU wheel from
+`https://download.pytorch.org/whl/cpu` first. To train on an NVIDIA GPU, replace it with the CUDA
+build of the same version (check `nvidia-smi` for the CUDA version your driver supports):
 
 ```powershell
-pip install --force-reinstall --no-deps torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cu132
+pip install --force-reinstall --no-deps torch==2.14.1 --index-url https://download.pytorch.org/whl/cu132
 python -c "import torch; print(torch.cuda.is_available())"
 ```
 
@@ -48,12 +51,49 @@ python -m src.evaluate --split val      # evaluate on the validation split
 python -m src.figures                   # comparison grid, failure cases, checkpoint comparison
 python -m src.analysis                  # best-vs-last checkpoint diagnostic (needs checkpoints/)
 python -m src.denoise                   # denoising study -> results/denoise/denoise_results.md
-python -m src.enhance --input dark.jpg --output out.png --method zerodce
+python -m src.enhance --input dark.jpg --output out.png --method zerodce [--denoise]
 pytest
 ruff check .; ruff format --check .
 ```
 
 All settings live in `config.yaml`.
+
+## Web API and demo
+
+```powershell
+uvicorn src.api:create_app --factory --port 8000   # API; docs at http://localhost:8000/docs
+streamlit run app.py                                # demo at http://localhost:8501
+```
+
+| Endpoint | Description |
+|---|---|
+| `GET /health` | `{"status": "ok"}` |
+| `GET /methods` | available methods and the default |
+| `POST /enhance` | multipart form: `file` (image), `method` (`zerodce`, `gamma`, `clahe`, `hist_eq`; default `zerodce`), `denoise` (`true`/`false`). Returns a PNG with `X-Processing-Time-Ms` and `X-Output-Size` headers. |
+
+```powershell
+curl.exe -F "file=@dark.jpg" -F "method=zerodce" -F "denoise=true" http://localhost:8000/enhance -o out.png
+```
+
+Uploads above 20 MB are rejected (413), files that are not images give 400, and an unknown method
+gives 422. Images whose longer side exceeds 2048 pixels are downscaled. `denoise` applies the
+bilateral filter after enhancement, the best option in the denoising study.
+
+## Docker
+
+The image uses CPU-only PyTorch and contains only the code, config and default weights.
+
+```powershell
+docker build -t low-light-enhancement .
+docker run --rm -p 8000:8000 low-light-enhancement
+docker run --rm -p 8501:8501 low-light-enhancement streamlit run app.py --server.address=0.0.0.0
+```
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `main` and on pull requests: ruff (lint and
+format), the test suite on CPU, then a Docker build with a smoke test that sends a real image to
+the API inside the container.
 
 ## Training Zero-DCE
 

@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Install dependencies (CPU-only PyTorch)
+        run: |
+          pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements-dev.txt
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Test
+        run: pytest -q
+
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t low-light-enhancement .
+      - name: Smoke test the API in the container
+        run: |
+          docker run -d --name api -p 8000:8000 low-light-enhancement
+          for i in $(seq 1 30); do curl -sf localhost:8000/health && break; sleep 2; done
+          curl -sf localhost:8000/health
+          status=$(curl -s -o out.png -w "%{http_code}" \
+            -F "file=@tests/assets/dark.png" -F method=zerodce -F denoise=true \
+            localhost:8000/enhance)
+          test "$status" = 200
+          file out.png | grep -q "PNG image data, 64 x 48"
+      - name: Container logs
+        if: always()
+        run: docker logs api || true

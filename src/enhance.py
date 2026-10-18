@@ -15,7 +15,7 @@ import cv2
 import numpy as np
 import torch
 
-from src.classical import Enhancer, build_classical_methods, load_tuned_params
+from src.classical import Enhancer, bilateral_denoise, build_classical_methods, load_tuned_params
 from src.config import load_config
 from src.data import read_image, write_image
 from src.zerodce import DCENet, enhance_array, load_model
@@ -57,8 +57,14 @@ def limit_size(image: np.ndarray, max_side: int | None) -> np.ndarray:
     return cv2.resize(image, size, interpolation=cv2.INTER_AREA)
 
 
-def enhance(image: np.ndarray, method: str, config: dict[str, Any]) -> np.ndarray:
-    """Enhance an RGB or grayscale image (float in [0, 1] or uint8); returns float RGB in [0, 1]."""
+def enhance(
+    image: np.ndarray, method: str, config: dict[str, Any], denoise: bool = False
+) -> np.ndarray:
+    """Enhance an RGB or grayscale image (float in [0, 1] or uint8); returns float RGB in [0, 1].
+
+    With ``denoise``, a bilateral filter (``inference.denoise`` in the config) is applied after
+    enhancement, the order and filter chosen in the denoising study.
+    """
     if image.dtype == np.uint8:
         image = image.astype(np.float32) / 255.0
     if image.ndim == 2:
@@ -71,7 +77,11 @@ def enhance(image: np.ndarray, method: str, config: dict[str, Any]) -> np.ndarra
         np.ascontiguousarray(image, dtype=np.float32), config["inference"]["max_side"]
     )
     with torch.inference_mode():
-        return np.clip(get_enhancer(method, config)(image), 0.0, 1.0).astype(np.float32)
+        output = np.clip(get_enhancer(method, config)(image), 0.0, 1.0).astype(np.float32)
+    if denoise:
+        dcfg = config["inference"]["denoise"]
+        output = bilateral_denoise(output, dcfg["sigma_color"], dcfg["sigma_space"])
+    return output
 
 
 def main() -> None:
@@ -79,11 +89,12 @@ def main() -> None:
     parser.add_argument("--input", required=True, help="Input image path")
     parser.add_argument("--output", required=True, help="Output image path (e.g. out.png)")
     parser.add_argument("--method", choices=METHODS, default="zerodce")
+    parser.add_argument("--denoise", action="store_true", help="Bilateral filter after enhancing")
     parser.add_argument("--config", default="config.yaml")
     args = parser.parse_args()
 
     config = load_config(args.config)
-    result = enhance(read_image(args.input), args.method, config)
+    result = enhance(read_image(args.input), args.method, config, args.denoise)
     write_image(args.output, result)
     print(f"Saved {args.output} ({result.shape[1]}x{result.shape[0]})")
 

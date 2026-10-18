@@ -50,6 +50,10 @@ train:
 
 inference:
   max_side: 2048          # larger images are downscaled before enhancement
+  max_upload_mb: 20       # API and demo reject larger uploads
+  denoise:                # optional bilateral filter after enhancement (denoising study, M4)
+    sigma_color: 1.0      # tuned on validation PSNR; see NOTES.md on over-smoothing
+    sigma_space: 2
 
 evaluation:
   timing_warmup: 1

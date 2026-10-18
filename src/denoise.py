@@ -25,9 +25,9 @@ from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
 from tqdm import tqdm
 
-from src.classical import Enhancer
+from src.classical import Enhancer, bilateral_denoise, nlm_denoise
 from src.config import load_config
-from src.data import list_pairs, load_pair, to_uint8
+from src.data import list_pairs, load_pair
 from src.evaluate import Method, evaluate_method, select_pairs, write_results
 from src.figures import _show
 from src.metrics import psnr_ssim
@@ -35,28 +35,6 @@ from src.zerodce import count_parameters, enhance_array, load_model
 
 FILTERS = ("nlm", "bilateral")
 ORDERS = ("after", "before")  # denoise after enhancement or before it
-
-
-def nlm_denoise(image: np.ndarray, h: float, template: int = 7, search: int = 21) -> np.ndarray:
-    """OpenCV non-local means on an RGB image in [0, 1]; ``h`` is in 8-bit intensity levels.
-
-    The colour version works in LAB and expects BGR input, so the channels are swapped
-    around the call. The same strength is used for luminance and colour.
-    """
-    bgr = cv2.cvtColor(to_uint8(image), cv2.COLOR_RGB2BGR)
-    out = cv2.fastNlMeansDenoisingColored(bgr, None, h, h, template, search)
-    return cv2.cvtColor(out, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
-
-
-def bilateral_denoise(image: np.ndarray, sigma_color: float, sigma_space: float) -> np.ndarray:
-    """Bilateral filter on a float RGB image; ``sigma_color`` is in [0, 1] intensity units.
-
-    The window diameter is derived by OpenCV from ``sigma_space``.
-    """
-    out = cv2.bilateralFilter(
-        np.ascontiguousarray(image, dtype=np.float32), 0, sigma_color, sigma_space
-    )
-    return np.clip(out, 0.0, 1.0).astype(np.float32)
 
 
 def make_denoiser(name: str, params: dict[str, Any], config: dict[str, Any]) -> Enhancer:

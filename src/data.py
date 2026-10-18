@@ -27,10 +27,20 @@ def read_image(path: str | Path) -> np.ndarray:
     Grayscale inputs are expanded to three channels and alpha is dropped.
     """
     # cv2.imread cannot open non-ASCII paths on Windows; decoding from bytes avoids that.
-    buffer = np.fromfile(str(path), dtype=np.uint8)
-    bgr = cv2.imdecode(buffer, cv2.IMREAD_COLOR)
+    try:
+        return decode_image(np.fromfile(str(path), dtype=np.uint8).tobytes())
+    except ValueError as error:
+        raise ValueError(f"Could not decode image: {path}") from error
+
+
+def decode_image(data: bytes) -> np.ndarray:
+    """Decode encoded image bytes (PNG, JPEG, ...) to float32 RGB in [0, 1].
+
+    Grayscale inputs are expanded to three channels and alpha is dropped.
+    """
+    bgr = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
     if bgr is None:
-        raise ValueError(f"Could not decode image: {path}")
+        raise ValueError("Could not decode image data")
     return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
 
 
@@ -39,15 +49,20 @@ def to_uint8(image: np.ndarray) -> np.ndarray:
     return np.clip(np.rint(image * 255.0), 0, 255).astype(np.uint8)
 
 
+def encode_image(image: np.ndarray, extension: str = ".png") -> bytes:
+    """Encode a float RGB image in [0, 1] as bytes in the format of ``extension``."""
+    bgr = cv2.cvtColor(to_uint8(image), cv2.COLOR_RGB2BGR)
+    ok, encoded = cv2.imencode(extension, bgr)
+    if not ok:
+        raise ValueError(f"Could not encode image as {extension}")
+    return encoded.tobytes()
+
+
 def write_image(path: str | Path, image: np.ndarray) -> None:
     """Write a float RGB image in [0, 1] to disk; the format follows the file extension."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    bgr = cv2.cvtColor(to_uint8(image), cv2.COLOR_RGB2BGR)
-    ok, encoded = cv2.imencode(path.suffix, bgr)
-    if not ok:
-        raise ValueError(f"Could not encode image as {path.suffix}: {path}")
-    encoded.tofile(str(path))
+    path.write_bytes(encode_image(image, path.suffix))
 
 
 def _image_files(directory: Path) -> dict[str, Path]:

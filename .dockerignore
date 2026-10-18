@@ -1,0 +1,9 @@
+# Allowlist: send only what the image needs to the Docker build.
+*
+!requirements.txt
+!config.yaml
+!app.py
+!src/
+!weights/zerodce.pth
+!results/tuned_params.yaml
+**/__pycache__

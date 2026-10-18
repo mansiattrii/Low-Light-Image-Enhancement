@@ -1,11 +1,10 @@
 import numpy as np
 import pytest
 
+from src.classical import bilateral_denoise, nlm_denoise
 from src.denoise import (
-    bilateral_denoise,
     compose,
     make_denoiser,
-    nlm_denoise,
     noise_sigma,
     noisiest_window,
     pipeline_name,
