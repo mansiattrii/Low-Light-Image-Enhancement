@@ -821,3 +821,102 @@ visual judgement for my own photos, not something the metrics can decide.
 - **How would you scale it?** Run several uvicorn workers or containers behind a load balancer.
   Each holds the 79k-parameter model, so memory is not the limit. For heavy traffic, batch
   requests on a GPU or export the model to ONNX Runtime for faster CPU inference.
+
+---
+
+## Milestone 6: deployment and write-up
+
+### What was built
+
+- `README.md` rewritten as the project's front page: results table and figures first, how
+  Zero-DCE works, the main findings, limitations, project structure, then setup, reproduction,
+  API, Docker, CI, deployment and references. Every number comes from the files in `results/`.
+- `deploy/huggingface/README.md`: the Space card. Hugging Face reads its YAML header (SDK, port,
+  title) to configure the Space.
+- `deploy/huggingface/prepare_space.ps1`: copies what the Space needs into a local clone of the
+  Space repository.
+- The Dockerfile now chooses API or demo with one environment variable (`APP=demo`), and the health
+  check follows the mode. This fixes the Milestone 5 caveat where the demo container showed as
+  "unhealthy".
+- CI's Docker job now also starts the image in demo mode and checks Streamlit's health endpoint.
+
+### Deployment design
+
+**One Dockerfile for everything.** A Docker Space always runs the Dockerfile's default command,
+which starts the API. Instead of keeping a second, nearly identical Dockerfile for the Space, the
+default command starts the API or the demo depending on `APP`. The preparation script appends
+`ENV APP=demo` to the copy that goes to the Space. Nothing is duplicated, so the Space cannot
+drift away from what CI tests.
+
+**Files come from the last commit (`git archive`), not the working folder.** The Space then
+contains exactly a committed version, without half-finished edits, and files have LF line endings
+whatever the Windows checkout uses. For testing before committing, `-Ref (git stash create)`
+exports the working tree as a temporary commit without touching the stash list.
+
+**Docker Space instead of Streamlit Space.** The same image is tested locally and in CI, with
+pinned CPU PyTorch and a non-root user with uid 1000, the user Spaces runs containers as.
+
+**Git LFS for the weights.** The Hub rejects binary files pushed with plain git. The script makes
+sure the Space's `.gitattributes` sends `*.pth` through LFS (new Spaces usually include that rule
+already).
+
+**XSRF protection off in the Space only.** Streamlit's cross-site request check is known to reject
+file uploads that reach the app through the Spaces proxy (upload fails with 403). The Space turns
+it off with `STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false`. The demo has no logins or stored user
+data that this check would protect, and the main image keeps it on. **Not verified:** this is the
+widely reported fix, but I could only test locally, where there is no proxy. If uploads work
+without it on the Space, it can be removed.
+
+### What was verified, and what was not
+
+Verified locally:
+- The script ran in PowerShell into a scratch folder, twice: the second run gives the same result
+  (the LFS rule is added once, and the Dockerfile is re-extracted before the lines are appended).
+  Files are UTF-8 without BOM, with LF endings.
+- That folder built into an image exactly as a Space would build it. Run with no extra settings,
+  it started the demo as PID 1, as user uid 1000, on port 8501, health check `healthy`, and
+  Streamlit reported `enableXsrfProtection = false`.
+- The main image still serves the API by default (health 200, enhance 200), and serves the demo
+  with `-e APP=demo`.
+
+Not verified: the actual push to Hugging Face and the Space build (they need a Hugging Face
+account and token), and the CI workflow on GitHub (no remote yet). Both are documented step by
+step in the README.
+
+### README decisions
+
+- **Results before setup.** A reviewer decides in seconds whether to read on; the table and the
+  comparison figure answer "does it work, and how well?" first.
+- **Honest headline.** The table shows Zero-DCE tying gamma on PSNR and losing on SSIM, and the
+  text says why (gamma was tuned with references, Zero-DCE was not). Overstating it would not
+  survive the first interview question.
+- **CPU time as a range (210–430 ms).** That range covers every evaluation run on this laptop
+  (213–223 ms in the denoising study, 250–384 ms in the Milestone 3 runs).
+- **A Limitations section.** Small test set, reference-based metrics, LOL-only training, and
+  reference-based checkpoint selection.
+
+### Alternatives considered and rejected
+
+- **A separate Dockerfile for the Space.** Simpler to read, but two files that must be kept in sync
+  by hand. One Dockerfile plus a two-line appendix cannot drift.
+- **Pushing the whole repository to the Space.** It would include results, notebooks and tests the
+  Space does not need, and the Space card must be the README, which would replace the project
+  README.
+- **Gradio Space.** Would have meant a second UI. The Streamlit demo already exists and is tested.
+- **The Spaces Streamlit SDK.** Hugging Face installs its own Streamlit version and runtime. The
+  Docker SDK runs the exact image tested here.
+
+### Likely interview questions
+
+- **How is the demo deployed?** As a Docker Space built from the same Dockerfile as CI, switched to
+  the Streamlit demo by one environment variable. A script copies the committed files into the
+  Space repository, and pushing triggers the build.
+- **Why not just upload the files by hand?** The script makes deployment repeatable, copies only
+  committed code, and handles the Space card, the demo switch and Git LFS the same way every time.
+- **What would you do with more time?** A no-reference quality metric for checkpoint selection,
+  Zero-DCE++ (curve estimation on a downsampled image) for speed, ONNX export for faster CPU
+  inference, and a learned denoiser. Training on more varied data (SICE, outdoor scenes) would
+  also help, so the model also learns to handle over-exposed input.
+- **What was the most important lesson?** "Following the paper" was not enough: the printed loss
+  equations left out scale factors that decide whether training works. Checking against the
+  official code, and building diagnostics instead of trusting the training loss, found it.

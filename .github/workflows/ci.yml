@@ -43,6 +43,13 @@ jobs:
             localhost:8000/enhance)
           test "$status" = 200
           file out.png | grep -q "PNG image data, 64 x 48"
+      - name: Smoke test the demo mode (used by the Hugging Face Space)
+        run: |
+          docker run -d --name demo -e APP=demo -p 8501:8501 low-light-enhancement
+          for i in $(seq 1 30); do curl -sf localhost:8501/_stcore/health && break; sleep 2; done
+          curl -sf localhost:8501/_stcore/health
       - name: Container logs
         if: always()
-        run: docker logs api || true
+        run: |
+          docker logs api || true
+          docker logs demo || true
