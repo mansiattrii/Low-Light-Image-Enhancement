@@ -28,3 +28,6 @@ weights/*
 Thumbs.db
 .vscode/
 .idea/
+
+# Backup: track training checkpoints
+!checkpoints/
