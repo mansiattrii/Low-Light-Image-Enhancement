@@ -21,7 +21,7 @@ $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $paths = @(
     "Dockerfile", ".dockerignore", "requirements.txt", "config.yaml", "app.py", "src",
-    "weights/zerodce.pth", "results/tuned_params.yaml"
+    "weights/zerodce.pth", "results/tuned_params.yaml", "assets/sample_low.png"
 )
 
 New-Item -ItemType Directory -Force $Destination | Out-Null

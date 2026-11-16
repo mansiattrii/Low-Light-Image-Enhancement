@@ -17,11 +17,13 @@ COPY requirements.txt .
 RUN pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cpu \
     && pip install -r requirements.txt
 
-# Only what inference needs: code, config, default weights and the tuned classical parameters.
+# Only what inference needs: code, config, default weights, the tuned classical parameters and
+# the demo's bundled sample image.
 COPY config.yaml app.py ./
 COPY src/ src/
 COPY weights/zerodce.pth weights/
 COPY results/tuned_params.yaml results/
+COPY assets/sample_low.png assets/
 
 RUN useradd --create-home --uid 1000 app
 USER app

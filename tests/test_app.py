@@ -14,9 +14,16 @@ def app(monkeypatch: pytest.MonkeyPatch) -> AppTest:
     return AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
 
 
-def test_renders_without_upload(app: AppTest) -> None:
+def test_renders_sample_without_upload(app: AppTest) -> None:
     assert not app.exception
     assert len(app.radio[0].options) == 4
+    assert len(app.get("image")) == 2  # the bundled sample and its enhancement
+    assert app.get("download_button")
+
+
+def test_sample_can_be_turned_off(app: AppTest) -> None:
+    app.checkbox[0].set_value(False).run()  # the sample toggle comes before the denoise box
+    assert not app.exception
     assert not app.get("image")
 
 
@@ -24,7 +31,7 @@ def test_renders_without_upload(app: AppTest) -> None:
 @pytest.mark.parametrize("denoise", [False, True])
 def test_upload_shows_result(app: AppTest, method: str, denoise: bool) -> None:
     app.radio[0].set_value(method)  # the method key; options holds the display labels
-    app.checkbox[0].set_value(denoise)
+    app.checkbox[1].set_value(denoise)
     app.file_uploader[0].upload("dark.png", ASSET.read_bytes(), "image/png").run()
     assert not app.exception
     assert not app.error

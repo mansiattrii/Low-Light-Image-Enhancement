@@ -6,4 +6,5 @@
 !src/
 !weights/zerodce.pth
 !results/tuned_params.yaml
+!assets/sample_low.png
 **/__pycache__

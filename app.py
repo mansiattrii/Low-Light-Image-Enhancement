@@ -16,6 +16,9 @@ from src.config import load_config
 from src.data import decode_image, encode_image
 from src.enhance import enhance, limit_size
 
+# A low-light photo from the LOL eval15 split (image 79), so the demo works without an upload.
+SAMPLE_IMAGE = Path(__file__).parent / "assets" / "sample_low.png"
+
 METHOD_LABELS = {
     "zerodce": "Zero-DCE (deep curve estimation)",
     "gamma": "Gamma correction",
@@ -44,17 +47,28 @@ def main() -> None:
         type=["png", "jpg", "jpeg", "bmp", "tif", "tiff"],
         max_upload_size=max_mb,
     )
+    use_sample = st.checkbox(
+        "No photo at hand? Use the bundled sample (a 600×400 night shot from the LOL dataset)",
+        value=True,
+        help="An uploaded photo always takes precedence over the sample.",
+    )
     method = st.radio("Method", list(METHOD_LABELS), format_func=METHOD_LABELS.get, horizontal=True)
     denoise = st.checkbox(
         "Reduce noise (bilateral filter after enhancement)",
         help="Brightening also amplifies sensor noise. The filter removes it but softens fine "
         "texture.",
     )
-    if uploaded is None:
+    if uploaded is not None:
+        name = Path(uploaded.name).stem
+        data = uploaded.getvalue()
+    elif use_sample:
+        name = SAMPLE_IMAGE.stem
+        data = SAMPLE_IMAGE.read_bytes()
+    else:
         return
 
     try:
-        image = decode_image(uploaded.getvalue())
+        image = decode_image(data)
     except ValueError:
         st.error("Could not read this file as an image.")
         return
@@ -77,7 +91,7 @@ def main() -> None:
     st.download_button(
         "Download result (PNG)",
         encode_image(output, ".png"),
-        file_name=f"{Path(uploaded.name).stem}_{method}.png",
+        file_name=f"{name}_{method}.png",
         mime="image/png",
     )
 
