@@ -8,10 +8,37 @@ trained without any well-lit reference images. Everything is measured on the LOL
 PSNR and SSIM, a denoising study checks where in the pipeline noise removal belongs, and the
 result is served through a REST API, a Streamlit demo and a CPU-only Docker image.
 
-**Live demo:** _add the Hugging Face Space link here after deploying (see
-[Deploying the demo](#deploying-the-demo-to-hugging-face-spaces))._
+**Live demo:** <https://zerodce-low-light.streamlit.app/> (Streamlit Community Cloud, CPU; the
+first visit after idle time takes a minute to wake up). It opens with a bundled sample, so there
+is nothing to upload:
+
+| Input (LOL eval15 image 79, `assets/sample_low.png`) | Zero-DCE (default model, no denoising) |
+|---|---|
+| ![Dark input photo](assets/sample_low.png) | ![Zero-DCE output](assets/sample_zerodce.png) |
 
 ![Input, every method and the reference on four eval15 images](results/figures/comparison_grid.png)
+
+## Run it
+
+Streamlit demo locally (after [Setup](#setup-windows-powershell)):
+
+```powershell
+streamlit run app.py                     # http://localhost:8501
+```
+
+FastAPI service in Docker (CPU-only image, no local Python needed):
+
+```powershell
+docker build -t low-light-enhancement .
+docker run --rm -p 8000:8000 low-light-enhancement     # docs at http://localhost:8000/docs
+curl.exe -F "file=@assets/sample_low.png" -F "method=zerodce" -F "denoise=true" http://localhost:8000/enhance -o out.png
+```
+
+Tests (synthetic images only; no dataset or GPU needed):
+
+```powershell
+pytest
+```
 
 ## Results at a glance
 
@@ -123,9 +150,10 @@ src/
 app.py           Streamlit demo
 config.yaml      every setting (paths, grids, model, training, inference)
 weights/         trained Zero-DCE weights (default + two variants)
+assets/          sample low-light image bundled with the demo, and its Zero-DCE output
 results/         tables, per-image scores, figures, training logs
-tests/           104 tests on synthetic images (no dataset or GPU needed)
-deploy/          Hugging Face Space card and preparation script
+tests/           105 tests on synthetic images (no dataset or GPU needed)
+deploy/          Hugging Face Space card and preparation script (optional, see Deploying)
 notebooks/       Colab training notebook
 NOTES.md         design decisions and interview notes, milestone by milestone
 ```
@@ -140,10 +168,11 @@ pip install -r requirements-dev.txt
 ```
 
 `requirements.txt` has what the project needs to run; `requirements-dev.txt` adds pytest, ruff
-and httpx. On Windows, PyPI's PyTorch wheel is the CPU build, which is enough for inference. On
-Linux the default wheel bundles CUDA, so the Dockerfile and CI install the CPU wheel from
-`https://download.pytorch.org/whl/cpu` first. To train on an NVIDIA GPU, replace it with the CUDA
-build of the same version (check `nvidia-smi` for the CUDA version your driver supports):
+and httpx. `requirements.txt` names `https://download.pytorch.org/whl/cpu` as an extra index so
+that pip picks the CPU-only PyTorch wheel on Linux too (the default Linux wheel bundles CUDA and
+is several GB); the Dockerfile and CI install it explicitly as well. CPU inference is all the demo
+and API need. To train on an NVIDIA GPU, replace it with the CUDA build of the same version (check
+`nvidia-smi` for the CUDA version your driver supports):
 
 ```powershell
 pip install --force-reinstall --no-deps torch==2.14.1 --index-url https://download.pytorch.org/whl/cu132
@@ -240,16 +269,26 @@ docker run --rm -p 8501:8501 -e APP=demo low-light-enhancement    # demo
 
 `.github/workflows/ci.yml` runs on every push to `main` and on pull requests: ruff (lint and
 format), the test suite on CPU, then a Docker build with a smoke test that sends a real image to
-the API inside the container. It starts running once the repository is pushed to GitHub:
+the API inside the container and checks that the demo mode starts. The badge at the top shows the
+latest result on `main`.
 
-```powershell
-git remote add origin https://github.com/<user>/<repo>.git
-git push -u origin main
-```
+## Deploying the demo
 
-## Deploying the demo to Hugging Face Spaces
+### Streamlit Community Cloud (used for the live demo)
 
-The Space runs the same Dockerfile, switched to the Streamlit demo. Free CPU hardware is enough.
+Free for public GitHub repositories and needs no extra files: the app is `app.py`, the weights and
+the sample image are in the repository, and `requirements.txt` already selects the CPU PyTorch
+wheel. On [share.streamlit.io](https://share.streamlit.io) sign in with GitHub, choose **Create
+app → Deploy a public app from GitHub**, enter the repository, branch `main` and main file
+`app.py`, and set **Advanced settings → Python version** to 3.11. The first build takes a few
+minutes; later pushes to `main` redeploy automatically. The free tier puts the app to sleep after
+a period without visitors, so the first request afterwards is slow.
+
+### Hugging Face Spaces (alternative)
+
+The Space runs the same Dockerfile, switched to the Streamlit demo. As of November 2026 Docker
+and Gradio Spaces require a PRO subscription even on the free CPU hardware; only static Spaces
+are free.
 
 1. On [huggingface.co](https://huggingface.co), create a **New Space**: SDK **Docker**, template
    **Blank**, hardware **CPU basic**.
@@ -276,7 +315,7 @@ The Space runs the same Dockerfile, switched to the Streamlit demo. Free CPU har
    ```
 
 5. The Space builds the image (several minutes; progress in the **Logs** tab) and then serves the
-   demo. Add its URL at the top of this README.
+   demo.
 
 ## References
 
