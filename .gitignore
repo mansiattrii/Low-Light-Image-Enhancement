@@ -14,9 +14,15 @@ __pycache__/
 data/*
 !data/splits/
 
-# Training artifacts: only the final weights in weights/ are tracked
+# Training artifacts: only the final weights in weights/ are tracked.
+# Files already committed under checkpoints/ stay tracked; new runs are ignored.
 checkpoints/
 runs/
+lightning_logs/
+wandb/
+mlruns/
+*.ckpt
+*.pt
 weights/*
 !weights/.gitkeep
 !weights/zerodce.pth
@@ -28,6 +34,3 @@ weights/*
 Thumbs.db
 .vscode/
 .idea/
-
-# Backup: track training checkpoints
-!checkpoints/
