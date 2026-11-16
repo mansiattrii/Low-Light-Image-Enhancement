@@ -1,3 +1,6 @@
+# The CPU-only torch wheel comes from the PyTorch index; the default PyPI wheel bundles CUDA
+# libraries (several GB) and does not fit hosted free tiers such as Streamlit Community Cloud.
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.14.1
 opencv-python-headless==5.0.0.93
 scikit-image==0.26.0
