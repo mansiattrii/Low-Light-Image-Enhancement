@@ -1,5 +1,7 @@
 # Low-Light Image Enhancement
 
+[![CI](https://github.com/mansiattrii/Low-Light-Image-Enhancement/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mansiattrii/Low-Light-Image-Enhancement/actions/workflows/ci.yml)
+
 Brightens very dark photos and compares classical image processing (gamma correction, histogram
 equalization, CLAHE) with **Zero-DCE**, a 79k-parameter network implemented from its paper and
 trained without any well-lit reference images. Everything is measured on the LOL dataset with
